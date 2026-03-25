@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinical Genetics Cases — Interactive Diagnostic Training</title>
+<style>
+:root {
+  --bg: #07111e; --surf: #0d1b2e; --surf2: #132338; --surf3: #1a2f48;
+  --acc: #4b8ef0; --acc-d: rgba(75,142,240,0.13); --acc-b: rgba(75,142,240,0.32);
+  --ok: #34d399; --ok-d: rgba(52,211,153,0.12); --ok-b: rgba(52,211,153,0.35);
+  --err: #f87171; --err-d: rgba(248,113,113,0.12);
+  --warn: #fbbf24; --warn-d: rgba(251,191,36,0.12);
+  --txt: #e2eaf5; --muted: #6b839e; --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;line-height:1.5}
+
+/* ─── LANDING ─── */
+#landing{max-width:1200px;margin:0 auto;padding:2.5rem 1.5rem 4rem}
+.site-hdr{text-align:center;margin-bottom:3rem;padding-bottom:2rem;border-bottom:1px solid var(--border)}
+.site-hdr .eyebrow{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:.5rem;font-weight:700}
+.site-hdr h1{font-size:2rem;font-weight:800;background:linear-gradient(135deg,#e2eaf5,#7aadde);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem}
+.site-hdr p{color:var(--muted);font-size:.95rem}
+.pill{display:inline-block;background:var(--acc-d);border:1px solid var(--acc-b);color:#a3c4f5;padding:.4rem 1.1rem;border-radius:20px;font-size:.8rem;margin-top:.8rem}
+.sec-lbl{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.9rem}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+@media(max-width:960px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.grid{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:1.3rem;position:relative;overflow:hidden;transition:all .2s}
+.card.on{cursor:pointer}
+.card.on:hover{border-color:var(--acc);background:var(--surf2);transform:translateY(-3px);box-shadow:0 12px 40px rgba(75,142,240,.18)}
+.card.on::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--acc),#8b5cf6);border-radius:14px 14px 0 0}
+.card.off{opacity:.38;cursor:not-allowed}
+.avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.35rem;margin-bottom:.8rem}
+.card.on .avatar{background:var(--acc-d);border:2px solid var(--acc-b)}
+.card.off .avatar{background:var(--surf3);border:2px solid var(--border2)}
+.card h3{font-size:.93rem;font-weight:700;margin-bottom:.2rem}
+.card .age{font-size:.77rem;color:var(--muted);margin-bottom:.45rem}
+.card .cc{font-size:.79rem;color:#8baac8;line-height:1.4}
+.sbadge{display:inline-block;background:var(--acc-d);color:var(--acc);font-size:.67rem;font-weight:700;padding:.17rem .48rem;border-radius:4px;margin-top:.65rem}
+.lock-tag{position:absolute;top:.7rem;right:.8rem;font-size:.68rem;color:var(--muted)}
+
+/* ─── CASE SHELL ─── */
+#case-view{display:none;flex-direction:column;min-height:100vh}
+.c-hdr{background:var(--surf);border-bottom:1px solid var(--border);padding:.85rem 1.4rem;display:flex;align-items:center;gap:.9rem;position:sticky;top:0;z-index:100}
+.back{background:none;border:1px solid var(--border2);color:var(--muted);padding:.35rem .75rem;border-radius:6px;cursor:pointer;font-size:.8rem;transition:all .15s;white-space:nowrap}
+.back:hover{border-color:var(--acc);color:var(--acc)}
+.c-title{flex:1;min-width:0}
+.c-title h2{font-size:.98rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c-title span{font-size:.73rem;color:var(--muted)}
+.steps{display:flex;align-items:center;gap:.28rem}
+.dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:.67rem;font-weight:700;color:var(--muted);transition:all .2s;flex-shrink:0}
+.dot.act{border-color:var(--acc);background:var(--acc-d);color:var(--acc)}
+.dot.done{border-color:var(--ok);background:var(--ok-d);color:var(--ok)}
+.conn{width:14px;height:2px;background:var(--border2);flex-shrink:0}
+.conn.done{background:var(--ok)}
+.c-body{display:grid;grid-template-columns:1fr 1fr;flex:1}
+@media(max-width:820px){.c-body{grid-template-columns:1fr}}
+.l-panel{background:var(--surf);border-right:1px solid var(--border);padding:1.8rem;overflow-y:auto;max-height:calc(100vh - 58px)}
+.r-panel{padding:1.8rem;overflow-y:auto;max-height:calc(100vh - 58px);background:var(--bg)}
+
+/* ─── CLINICAL DOCUMENT STYLE ─── */
+.doc{background:#0c1620;border:1px solid var(--border2);border-radius:10px;padding:1.4rem 1.5rem;margin-bottom:.9rem;font-size:.85rem}
+.doc-header{display:flex;justify-content:space-between;margin-bottom:1rem;padding-bottom:.8rem;border-bottom:1px solid var(--border2)}
+.doc-from{color:var(--muted);font-size:.78rem;line-height:1.6}
+.doc-from strong{color:var(--txt)}
+.doc-stamp{font-size:.72rem;color:var(--acc);font-weight:700;letter-spacing:.05em}
+.doc p,.doc li{line-height:1.7;color:#c8d8ec}
+.doc ul{list-style:none;padding:0}
+.doc ul li{padding-left:1em;position:relative}
+.doc ul li::before{content:"→";position:absolute;left:0;color:var(--acc);font-size:.85em}
+.doc h4{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);margin:1rem 0 .4rem}
+.doc .mono{font-family:'SF Mono','Fira Code',monospace;font-size:.8rem;background:var(--surf3);padding:.7rem .9rem;border-radius:6px;border:1px solid var(--border2);color:#a3d4ff;margin-top:.4rem;display:block;line-height:1.75}
+.doc .alert{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:7px;padding:.7rem .9rem;color:#fde68a;font-size:.82rem;margin-top:.8rem}
+.info-chip{background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem}
+.info-chip h4{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--acc);margin-bottom:.5rem}
+.info-chip p,.info-chip li{font-size:.85rem;color:#c8d8ec;line-height:1.65}
+.info-chip ul{list-style:none;padding:0}
+.info-chip ul li{padding-left:1em;position:relative}
+.info-chip ul li::before{content:"→";position:absolute;left:0;color:var(--acc);font-size:.85em}
+.stn-lbl{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);margin-bottom:.35rem}
+.stn-title{font-size:1.3rem;font-weight:800;margin-bottom:1.4rem;line-height:1.25}
+
+/* ─── CHAT ─── */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 120px);min-height:380px}
+.chat-msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:.75rem;padding:.5rem 0 1rem}
+.msg{max-width:88%;padding:.8rem 1rem;border-radius:12px;font-size:.875rem;line-height:1.6}
+.msg.bot{background:var(--surf2);border:1px solid var(--border2);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.user{background:var(--acc-d);border:1px solid var(--acc-b);align-self:flex-end;border-bottom-right-radius:4px;color:#c8e0ff}
+.msg.sys{background:var(--ok-d);border:1px solid var(--ok-b);align-self:center;border-radius:8px;font-size:.8rem;color:#a7f3d0;text-align:center;max-width:100%}
+.bot-tag{font-size:.68rem;font-weight:700;color:var(--acc);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.06em}
+.chat-foot{border-top:1px solid var(--border);padding-top:.9rem;display:flex;flex-direction:column;gap:.6rem}
+.chat-in{background:var(--surf2);border:1px solid var(--border2);color:var(--txt);padding:.65rem .9rem;border-radius:8px;font-size:.875rem;resize:none;width:100%;min-height:72px;font-family:inherit;line-height:1.5}
+.chat-in:focus{outline:none;border-color:var(--acc)}
+.chat-in::placeholder{color:var(--muted)}
+.chat-row{display:flex;gap:.6rem;align-items:center}
+.send-btn{background:var(--acc);border:none;color:#fff;padding:.6rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:700;font-size:.85rem;transition:all .15s;white-space:nowrap}
+.send-btn:hover{opacity:.88}
+.send-btn:disabled{opacity:.4;cursor:default}
+.reveal-btn{background:var(--surf3);border:1px solid var(--border2);color:var(--muted);padding:.5rem .9rem;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .15s}
+.reveal-btn:hover{border-color:var(--warn);color:var(--warn)}
+.next-btn{background:linear-gradient(135deg,var(--acc),#7c3aed);color:#fff;border:none;padding:.72rem 1.8rem;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .15s;display:none;margin-top:.8rem}
+.next-btn:hover{opacity:.9;transform:translateY(-1px)}
+
+/* ─── PEDIGREE BUILDER ─── */
+.ped-wrap{background:var(--surf2);border:1px solid var(--border2);border-radius:12px;padding:1.1rem;margin-bottom:1rem}
+.ped-toolbar{display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:.9rem}
+.tool-btn{background:var(--surf3);border:1px solid var(--border2);color:var(--txt);padding:.38rem .75rem;border-radius:7px;cursor:pointer;font-size:.78rem;font-weight:600;transition:all .13s;display:flex;align-items:center;gap:.35rem}
+.tool-btn:hover{border-color:var(--acc);color:var(--acc)}
+.tool-btn.act{border-color:var(--acc);background:var(--acc-d);color:var(--acc)}
+.ped-canvas{background:#050d18;border:1px solid var(--border2);border-radius:8px;display:block;width:100%;cursor:pointer}
+.ped-help{font-size:.75rem;color:var(--muted);margin-top:.5rem;line-height:1.5}
+.ped-actions{display:flex;gap:.6rem;margin-top:.8rem;flex-wrap:wrap}
+.check-ped-btn{background:var(--surf3);border:1px solid var(--border2);color:var(--txt);padding:.55rem 1.1rem;border-radius:8px;cursor:pointer;font-weight:600;font-size:.85rem;transition:all .15s}
+.check-ped-btn:hover{border-color:var(--ok);color:var(--ok)}
+.ped-feedback{display:none;border-radius:8px;padding:.8rem 1rem;margin-top:.7rem;font-size:.85rem;line-height:1.55;border-left:3px solid transparent}
+.ped-feedback.ok{background:var(--ok-d);border-color:var(--ok)}
+.ped-feedback.err{background:var(--err-d);border-color:var(--err)}
+
+/* ─── VCF STATION ─── */
+.vcf-box{background:#050d18;border:1px solid var(--border2);border-radius:10px;padding:1.1rem;margin-bottom:1rem}
+.vcf-box h4{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--acc);margin-bottom:.7rem}
+.vcf-pre{font-family:'SF Mono','Fira Code',monospace;font-size:.73rem;color:#8ab4d4;line-height:1.6;white-space:pre;overflow-x:auto;max-height:200px;overflow-y:auto}
+.dl-btn{background:linear-gradient(135deg,var(--acc),#2563eb);border:none;color:#fff;padding:.65rem 1.3rem;border-radius:8px;cursor:pointer;font-weight:700;font-size:.85rem;margin-right:.6rem;transition:all .15s}
+.dl-btn:hover{opacity:.88;transform:translateY(-1px)}
+.tool-links{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
+.tool-link{background:var(--surf3);border:1px solid var(--border2);color:#93c5fd;padding:.5rem .9rem;border-radius:7px;text-decoration:none;font-size:.8rem;font-weight:600;transition:all .13s;display:flex;align-items:center;gap:.3rem}
+.tool-link:hover{border-color:var(--acc);background:var(--acc-d)}
+.vcf-submit-row{display:flex;gap:.6rem;margin-top:.9rem}
+.vcf-input{flex:1;background:var(--surf3);border:1px solid var(--border2);color:var(--txt);padding:.6rem .9rem;border-radius:8px;font-size:.875rem;font-family:monospace}
+.vcf-input:focus{outline:none;border-color:var(--acc)}
+.vcf-check-btn{background:var(--surf3);border:1px solid var(--border2);color:var(--txt);padding:.6rem 1rem;border-radius:8px;cursor:pointer;font-weight:600;font-size:.85rem;transition:all .15s;white-space:nowrap}
+.vcf-check-btn:hover{border-color:var(--acc)}
+
+/* ─── ACMG ─── */
+.acmg-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.8rem}
+.acmg-it{background:var(--surf3);border:1px solid var(--border2);border-radius:8px;padding:.62rem .78rem;cursor:pointer;transition:all .14s;user-select:none}
+.acmg-it:hover{border-color:var(--acc);background:var(--acc-d)}
+.acmg-it.sel{border-color:var(--acc);background:var(--acc-d)}
+.acmg-it.rev-ok{border-color:var(--ok);background:var(--ok-d);pointer-events:none}
+.acmg-it.rev-err{border-color:var(--err);background:var(--err-d);opacity:.65;pointer-events:none}
+.acmg-it.dis{pointer-events:none}
+.acmg-code{font-size:.74rem;font-weight:800;color:var(--acc);margin-bottom:.18rem}
+.acmg-it.rev-ok .acmg-code{color:var(--ok)}
+.acmg-it.rev-err .acmg-code{color:var(--err)}
+.acmg-desc{font-size:.72rem;color:var(--muted);line-height:1.3}
+.ev-table{width:100%;border-collapse:collapse;font-size:.82rem;margin-bottom:.85rem}
+.ev-table th{text-align:left;padding:.5rem .75rem;background:var(--surf3);color:var(--muted);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.ev-table td{padding:.52rem .75rem;border-bottom:1px solid var(--border);color:#c8d8ec;vertical-align:top}
+.ev-table tr:last-child td{border:none}
+.badge{display:inline-block;padding:.16rem .46rem;border-radius:4px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.bp{background:rgba(248,113,113,.17);color:#fca5a5}
+.blp{background:rgba(251,146,60,.17);color:#fdba74}
+.bvus{background:rgba(251,191,36,.17);color:#fde68a}
+.bben{background:rgba(52,211,153,.17);color:#6ee7b7}
+.bnil{background:var(--surf3);color:var(--muted)}
+.class-sel{background:var(--surf3);border:1px solid var(--border2);color:var(--txt);padding:.58rem .9rem;border-radius:8px;font-size:.87rem;width:100%;margin-bottom:.7rem;cursor:pointer}
+.class-sel:focus{outline:none;border-color:var(--acc)}
+.sub-btn{background:var(--surf3);border:1px solid var(--border2);color:var(--txt);padding:.6rem 1.3rem;border-radius:8px;cursor:pointer;font-weight:600;font-size:.87rem;transition:all .15s}
+.sub-btn:hover{border-color:var(--acc);color:var(--acc)}
+.fb{display:none;border-radius:9px;padding:1rem 1.1rem;margin-top:.8rem;font-size:.875rem;line-height:1.65;border-left:3px solid transparent}
+.fb.ok{background:var(--ok-d);border-color:var(--ok)}
+.fb.err{background:var(--err-d);border-color:var(--err)}
+.fb-hdr{font-weight:700;margin-bottom:.35rem}
+.fb.ok .fb-hdr{color:var(--ok)}
+.fb.err .fb-hdr{color:var(--err)}
+
+/* ─── COMPLETION ─── */
+.comp{text-align:center;padding:2.5rem 1.5rem;max-width:580px;margin:0 auto}
+.comp-icon{font-size:2.8rem;margin-bottom:.9rem}
+.comp-title{font-size:1.5rem;font-weight:800;margin-bottom:.4rem}
+.comp-sub{color:var(--muted);font-size:.88rem;margin-bottom:1.8rem}
+.kp{background:var(--surf2);border:1px solid var(--border2);border-radius:12px;padding:1.3rem 1.4rem;margin-bottom:1.4rem;text-align:left}
+.kp h4{font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);margin-bottom:.9rem}
+.kp-item{display:flex;gap:.55rem;margin-bottom:.7rem;font-size:.875rem;line-height:1.55;color:#c8d8ec}
+.kp-item .ck{color:var(--ok);font-weight:700;flex-shrink:0}
+.home-btn{background:linear-gradient(135deg,var(--acc),#7c3aed);border:none;color:#fff;padding:.72rem 1.8rem;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .15s;margin-right:.7rem}
+.home-btn:hover{opacity:.9}
+.rst-btn{background:var(--surf2);border:1px solid var(--border2);color:var(--txt);padding:.72rem 1.5rem;border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .15s}
+.rst-btn:hover{border-color:var(--acc)}
+</style>
+</head>
+<body>
+
+<!-- ══ LANDING ══ -->
+<div id="landing">
+  <div class="site-hdr">
+    <div class="eyebrow">Human Genetics and Genomics · H-BRS · Prof. Dr. Schnappauf</div>
+    <h1>Clinical Genetics Cases</h1>
+    <p>You are the attending clinical geneticist. Work through the case — step by step.</p>
+    <div class="pill">Choose a patient to enter the consultation room →</div>
+  </div>
+  <div class="sec-lbl">Patient Registry</div>
+  <div class="grid" id="patient-grid"></div>
+</div>
+
+<!-- ══ CASE VIEW ══ -->
+<div id="case-view">
+  <div class="c-hdr">
+    <button class="back" onclick="showLanding()">← Cases</button>
+    <div class="c-title">
+      <h2 id="c-name">—</h2>
+      <span id="c-sub">—</span>
+    </div>
+    <div class="steps" id="steps"></div>
+  </div>
+  <div class="c-body">
+    <div class="l-panel" id="l-panel"></div>
+    <div class="r-panel" id="r-panel"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// PATIENTS
+// ═══════════════════════════════════════════════════════
+const PATIENTS = [
+  {id:'elena',name:'Elena A.',age:'4 months',sex:'F',cc:'Hypotonia, dysmorphic features, congenital heart defect',session:'Session I · Chromosomal Disorders',emoji:'👶',on:false},
+  {id:'tobias',name:'Tobias K.',age:'17 years',sex:'M',cc:'Tall stature, learning difficulties, infertility',session:'Session II · Sex Chromosome Disorders',emoji:'🧑',on:false},
+  {id:'emily',name:'Emily N.',age:'5 months',sex:'F',cc:'Recurrent lung infections, failure to thrive',session:'Session III · Mendelian Inheritance',emoji:'👶',on:false},
+  {id:'amara',name:'Amara O.',age:'3 years',sex:'F',cc:'Neurological regression, coarse facial features',session:'Session IV · Inborn Errors of Metabolism',emoji:'🧒',on:false},
+  {id:'felix',name:'Felix B.',age:'8 years',sex:'M',cc:'Progressive proximal muscle weakness, elevated CK',session:'Session V · Neuromuscular Genetics',emoji:'🧒',on:false},
+  {id:'yuki',name:'Yuki T.',age:'16 years',sex:'F',cc:'Primary amenorrhea, short stature, webbed neck',session:'Session VI · Gonadal Genetics',emoji:'🧑',on:false},
+  {id:'marco',name:'Marco S.',age:'34 years',sex:'M',cc:'Hundreds of colorectal polyps, family cancer history',session:'Session VII · Hereditary Cancer',emoji:'🧔',on:false},
+  {id:'petra',name:'Petra W.',age:'38 years',sex:'F',cc:'Sister diagnosed with breast cancer, requests BRCA testing',session:'Session VIII · Cancer Genetics',emoji:'👩',on:false},
+  {id:'luca',name:'Luca M.',age:'12 years',sex:'M',cc:'Recurrent syncope during soccer, QTc 480 ms on ECG',session:'Session IX · Variant Interpretation',emoji:'👦',on:true},
+  {id:'priya',name:'Priya R.',age:'45 years',sex:'F',cc:'Severe adverse reaction to standard-dose clopidogrel',session:'Session X · Pharmacogenomics',emoji:'👩',on:false},
+  {id:'anna',name:'Anna K.',age:'31 years',sex:'F',cc:'Pregnant 12 weeks, cfDNA T21 risk 1:35',session:'Session XI · Prenatal Diagnostics',emoji:'🤰',on:false},
+  {id:'jonas',name:'Jonas H.',age:'Newborn',sex:'M',cc:'Positive newborn screen for PKU, confirmation needed',session:'Session XII · Newborn Screening',emoji:'👶',on:false}
+];
+
+// ═══════════════════════════════════════════════════════
+// VCF DATA (educational, ~12 variants, GRCh38 approximate)
+// ═══════════════════════════════════════════════════════
+const VCF_CONTENT = `##fileformat=VCFv4.2
+##reference=GRCh38
+##source=H-BRS Educational Exome — Case Luca M. (anonymized)
+##NOTE=This VCF was generated for teaching purposes. Coordinates are approximate.
+##NOTE=Patient: 12-year-old male, exercise-induced syncope, QTc 480 ms
+##NOTE=Sequencing: Clinical exome 100x mean coverage | Analysis date: 2025-12-01
+##FILTER=<ID=PASS,Description="All filters passed">
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=MAF,Number=1,Type=Float,Description="Population MAF in gnomAD v4">
+##INFO=<ID=HGVS,Number=1,Type=String,Description="HGVS cDNA notation">
+##INFO=<ID=AA,Number=1,Type=String,Description="Amino acid change">
+##INFO=<ID=IMPACT,Number=1,Type=String,Description="Predicted functional impact">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths REF,ALT">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Total read depth">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype quality">
+#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tLUCA_M
+chr1\t155235837\trs1800562\tG\tA\t.\tPASS\tGENE=HFE;MAF=0.065;HGVS=NM_000410.4:c.845G>A;AA=p.Cys282Tyr;IMPACT=MODERATE\tGT:DP\t0/1:95
+chr2\t166170682\trs142078471\tA\tG\t.\tPASS\tGENE=TTN;MAF=0.00021;HGVS=NM_001267550.2:c.52438A>G;AA=p.Ile17480Val;IMPACT=MODERATE\tGT:AD:DP:GQ\t0/1:45,3:48:21
+chr3\t38674337\trs199473185\tG\tA\t.\tPASS\tGENE=SCN5A;MAF=0.0031;HGVS=NM_198056.3:c.1350G>A;AA=p.Lys450=;IMPACT=LOW\tGT:AD:DP:GQ\t0/1:38,41:79:99
+chr7\t117548628\trs75527207\tA\tG\t.\tPASS\tGENE=CFTR;MAF=0.28;HGVS=NM_000492.4:c.2562T>C;AA=p.Asp854=;IMPACT=LOW\tGT:DP\t0/0:110
+chr7\t150999023\trs1805159\tA\tG\t.\tPASS\tGENE=KCNH2;MAF=0.082;HGVS=NM_000238.4:c.2690A>G;AA=p.Asn897Ser;IMPACT=LOW\tGT:DP\t0/0:88
+chr11\t2592716\trs1057519998\tC\tT\t.\tPASS\tGENE=KCNQ1;MAF=0.42;HGVS=NM_000218.3:c.1638+47C>T;AA=.;IMPACT=MODIFIER\tGT:DP\t0/1:98
+chr11\t2592844\t.\tG\tT\t310\tPASS\tGENE=KCNQ1;MAF=0;HGVS=NM_000218.3:c.64G>T;AA=p.Gly22Cys;IMPACT=MODERATE\tGT:AD:DP:GQ\t0/1:62,58:120:99
+chr11\t2646120\trs1805127\tG\tA\t.\tPASS\tGENE=KCNQ1;MAF=0.15;HGVS=NM_000218.3:c.1638G>A;AA=p.Ala546=;IMPACT=LOW\tGT:DP\t0/0:88
+chr12\t111884008\trs188449271\tC\tT\t.\tPASS\tGENE=ABCC9;MAF=0.000012;HGVS=NM_020297.3:c.4289G>A;AA=p.Arg1430His;IMPACT=MODERATE\tGT:AD:DP:GQ\t0/1:42,3:45:19
+chr15\t89327104\trs200831548\tA\tG\t.\tPASS\tGENE=FBN1;MAF=0.0008;HGVS=NM_000138.5:c.1A>G;AA=p.Met1Val;IMPACT=HIGH\tGT:AD:DP:GQ\t0/1:39,2:41:16
+chr17\t7674220\trs28934574\tC\tT\t.\tPASS\tGENE=TP53;MAF=0.0001;HGVS=NM_000546.6:c.817C>T;AA=p.Arg273Cys;IMPACT=HIGH\tGT:AD:DP:GQ\t0/1:41,3:44:18
+chr22\t39724789\trs1065776\tG\tA\t.\tPASS\tGENE=ADSL;MAF=0.38;HGVS=NM_000026.3:c.1157G>A;AA=p.Arg386His;IMPACT=MODERATE\tGT:DP\t0/1:76`;
+
+// ═══════════════════════════════════════════════════════
+// CHAT ENGINE
+// ═══════════════════════════════════════════════════════
+class ChatEngine {
+  constructor(panelId, dialogue, onComplete) {
+    this.panelId = panelId;
+    this.dialogue = dialogue; // array of {bot, match, responses, final?}
+    this.onComplete = onComplete;
+    this.turn = 0;
+    this.msgs = [];
+    this.done = false;
+  }
+  mount() {
+    const el = document.getElementById(this.panelId);
+    el.innerHTML = this._html();
+    this._scroll();
+    this._addBot(this.dialogue[0].bot);
+    this._bindSend();
+  }
+  _html() {
+    return `<div class="chat-msgs" id="chat-msgs-${this.panelId}"></div>
+    <div class="chat-foot">
+      <textarea class="chat-in" id="chat-in-${this.panelId}" placeholder="Type your clinical reasoning here…" rows="3"></textarea>
+      <div class="chat-row">
+        <button class="send-btn" id="send-${this.panelId}" onclick="chatSend('${this.panelId}')">Send →</button>
+        <button class="reveal-btn" onclick="chatReveal('${this.panelId}')">Show explanation</button>
+      </div>
+      <div id="next-area-${this.panelId}"></div>
+    </div>`;
+  }
+  _scroll() {
+    const m = document.getElementById(`chat-msgs-${this.panelId}`);
+    if (m) m.scrollTop = m.scrollHeight;
+  }
+  _addBot(text) {
+    this.msgs.push({role:'bot',text});
+    this._render();
+  }
+  _addUser(text) {
+    this.msgs.push({role:'user',text});
+    this._render();
+  }
+  _addSys(text) {
+    this.msgs.push({role:'sys',text});
+    this._render();
+  }
+  _render() {
+    const m = document.getElementById(`chat-msgs-${this.panelId}`);
+    if (!m) return;
+    m.innerHTML = this.msgs.map(msg => {
+      if (msg.role === 'bot') return `<div class="msg bot"><div class="bot-tag">AI Clinical Mentor</div>${msg.text}</div>`;
+      if (msg.role === 'user') return `<div class="msg user">${msg.text}</div>`;
+      return `<div class="msg sys">${msg.text}</div>`;
+    }).join('');
+    setTimeout(() => m.scrollTop = m.scrollHeight, 50);
+  }
+  send(text) {
+    if (this.done || !text.trim()) return;
+    this._addUser(text);
+    const tin = document.getElementById(`chat-in-${this.panelId}`);
+    if (tin) tin.value = '';
+    const current = this.dialogue[this.turn];
+    const lower = text.toLowerCase();
+    let resp = null;
+    if (current.match) {
+      for (const [pattern, reply] of current.match) {
+        if (pattern.test(lower)) { resp = reply; break; }
+      }
+      if (!resp) resp = current.fallback || 'Interesting reasoning. Can you elaborate — which specific clinical or genomic evidence supports your thinking?';
+    }
+    this.turn++;
+    setTimeout(() => {
+      if (resp) this._addBot(resp);
+      if (this.turn >= this.dialogue.length) {
+        this.done = true;
+        const area = document.getElementById(`next-area-${this.panelId}`);
+        if (area) area.innerHTML = `<button class="next-btn" style="display:inline-block" onclick="chatNext('${this.panelId}')">Continue to next station →</button>`;
+        const sb = document.getElementById(`send-${this.panelId}`);
+        if (sb) sb.disabled = true;
+      } else {
+        setTimeout(() => this._addBot(this.dialogue[this.turn].bot), 600);
+      }
+    }, 300);
+  }
+  reveal() {
+    if (!this.done) {
+      this.done = true;
+      const finalD = this.dialogue[this.dialogue.length - 1];
+      if (finalD.reveal) this._addSys(finalD.reveal);
+      const area = document.getElementById(`next-area-${this.panelId}`);
+      if (area) area.innerHTML = `<button class="next-btn" style="display:inline-block" onclick="chatNext('${this.panelId}')">Continue to next station →</button>`;
+      const sb = document.getElementById(`send-${this.panelId}`);
+      if (sb) sb.disabled = true;
+    }
+  }
+}
+
+const activeChatEngines = {};
+function chatSend(id) {
+  const tin = document.getElementById(`chat-in-${id}`);
+  if (tin && activeChatEngines[id]) activeChatEngines[id].send(tin.value);
+}
+function chatReveal(id) {
+  if (activeChatEngines[id]) activeChatEngines[id].reveal();
+}
+function chatNext(id) { goNext(); }
+
+// ═══════════════════════════════════════════════════════
+// CASE DATA — LUCA
+// ═══════════════════════════════════════════════════════
+const CASE_LUCA = {
+  id:'luca', name:'Luca M.', subtitle:'Session IX · Genetic Variant Interpretation',
+  stations: [
+
+  // ── S1: CLINICAL INTAKE (Chat) ────────────────────────────────
+  { id:1, type:'chat', label:'Station 1 of 6', title:'Clinical Intake',
+    left: `
+      <div class="stn-lbl">Station 1 of 6</div>
+      <div class="stn-title">Clinical Intake</div>
+      <div class="doc">
+        <div class="doc-header">
+          <div class="doc-from"><strong>From:</strong> Dr. Sarah Hoffmann, MD<br>Pediatric Cardiology, University Hospital Bonn<br><strong>To:</strong> Clinical Genetics Consultation</div>
+          <div class="doc-stamp">REFERRAL<br>2025-11-28</div>
+        </div>
+        <h4>Patient</h4>
+        <p>Luca M., DOB 12.03.2013 (12 years), male. Non-consanguineous parents.</p>
+        <h4>Reason for Referral</h4>
+        <p>Two episodes of <strong>exercise-induced syncope</strong> during soccer training in the past three months. Referring for genetic evaluation of suspected hereditary arrhythmia syndrome.</p>
+        <h4>Clinical Findings</h4>
+        <ul>
+          <li>Syncope strictly during physical exertion; brief loss of consciousness (~30 s); spontaneous recovery</li>
+          <li>Prodrome: palpitations and light-headedness before each episode</li>
+          <li>No post-ictal confusion, no tongue biting, no EEG abnormality</li>
+          <li>Echocardiography: structurally normal heart</li>
+          <li><strong>ECG: QTc = 480 ms</strong> (Bazett; normal ≤440 ms males)</li>
+          <li>Blood glucose and electrolytes: within normal limits</li>
+        </ul>
+        <h4>Family History</h4>
+        <ul>
+          <li>Father, 42 yrs — healthy, no cardiac history</li>
+          <li>Mother, 40 yrs — healthy, no cardiac history</li>
+          <li>No known sudden cardiac death in family</li>
+        </ul>
+        <div class="alert">⚕ Please advise on further diagnostic workup and genetic testing strategy.</div>
+      </div>
+      <div class="info-chip" style="margin-top:.8rem">
+        <h4>ECG Tracing — Lead II (automated measurement)</h4>
+        <p style="font-size:.77rem;color:#8baac8;margin-bottom:.55rem">QTc calculated via Bazett formula. HR 72 bpm. Compare with age-matched male reference.</p>
+        <svg viewBox="0 0 440 150" style="background:#050d18;border-radius:7px;width:100%;display:block">
+          <defs>
+            <pattern id="eg-sm" width="8" height="8" patternUnits="userSpaceOnUse">
+              <path d="M 8 0 L 0 0 0 8" fill="none" stroke="#0c1e30" stroke-width="0.5"/>
+            </pattern>
+            <pattern id="eg-lg" width="40" height="40" patternUnits="userSpaceOnUse">
+              <rect width="40" height="40" fill="url(#eg-sm)"/>
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0f2236" stroke-width="0.9"/>
+            </pattern>
+          </defs>
+          <rect width="440" height="150" fill="url(#eg-lg)"/>
+          <line x1="220" y1="8" x2="220" y2="142" stroke="#0f2236" stroke-width="1.5"/>
+          <text x="105" y="18" text-anchor="middle" font-size="10" fill="#34d399" font-weight="700" font-family="sans-serif">Normal male — QTc = 400 ms</text>
+          <text x="330" y="18" text-anchor="middle" font-size="10" fill="#f87171" font-weight="700" font-family="sans-serif">Luca M. — QTc = 480 ms ⚠</text>
+          <!-- Normal ECG trace -->
+          <polyline points="12,88 30,88 40,70 50,88 62,88 64,100 68,18 72,100 74,88 97,88 109,70 127,88 200,88"
+                    stroke="#34d399" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+          <line x1="64" y1="110" x2="127" y2="110" stroke="#34d399" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="64" y1="107" x2="64" y2="113" stroke="#34d399" stroke-width="1.2"/>
+          <line x1="127" y1="107" x2="127" y2="113" stroke="#34d399" stroke-width="1.2"/>
+          <text x="95" y="124" text-anchor="middle" font-size="8" fill="#34d399" font-family="sans-serif">QT ≈ 360 ms (QTc 400)</text>
+          <text x="40" y="65" text-anchor="middle" font-size="8" fill="#5a7f9a" font-family="sans-serif">P</text>
+          <text x="68" y="13" text-anchor="middle" font-size="8" fill="#5a7f9a" font-family="sans-serif">R</text>
+          <text x="109" y="65" text-anchor="middle" font-size="8" fill="#5a7f9a" font-family="sans-serif">T</text>
+          <!-- Prolonged ECG trace -->
+          <polyline points="228,88 246,88 256,70 266,88 278,88 280,100 284,18 288,100 290,88 313,88 333,66 369,88 430,88"
+                    stroke="#f87171" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+          <line x1="280" y1="110" x2="369" y2="110" stroke="#f87171" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="280" y1="107" x2="280" y2="113" stroke="#f87171" stroke-width="1.2"/>
+          <line x1="369" y1="107" x2="369" y2="113" stroke="#f87171" stroke-width="1.2"/>
+          <text x="324" y="124" text-anchor="middle" font-size="8" fill="#f87171" font-family="sans-serif">QT ≈ 432 ms (QTc 480) — PROLONGED</text>
+          <text x="256" y="65" text-anchor="middle" font-size="8" fill="#5a7f9a" font-family="sans-serif">P</text>
+          <text x="284" y="13" text-anchor="middle" font-size="8" fill="#5a7f9a" font-family="sans-serif">R</text>
+          <text x="333" y="61" text-anchor="middle" font-size="8" fill="#5a7f9a" font-family="sans-serif">T</text>
+          <text x="12" y="144" font-size="7" fill="#1e3a52" font-family="sans-serif">25 mm/s · 10 mm/mV · schematic representation for teaching</text>
+        </svg>
+        <p style="font-size:.76rem;color:var(--muted);margin-top:.4rem">Normal male QTc threshold: ≤440 ms. Luca's QTc of 480 ms is 40 ms above the 99th percentile cut-off (460 ms) and falls in the range diagnostic for LQTS (>480 ms in symptomatic patients per Schwartz score).</p>
+      </div>`,
+    chat: [
+      { bot: `<strong>You are the attending clinical geneticist.</strong><br><br>Dr. Hoffmann's referral has just landed on your desk. Before you meet the family, you review the letter carefully.<br><br>What is your primary working diagnosis, and what single finding in this referral is most critical to that diagnosis?`,
+        match: [
+          [/long.?qt|lqts|qt.?synd|channelopathy|kcnq/i, `Good. Long QT Syndrome is your primary working diagnosis, and LQTS type 1 specifically is the most exercise-sensitive subtype. Now tell me: <strong>why does exercise specifically trigger the arrhythmia in LQTS1?</strong> Think about the IKs channel and adrenergic signalling.`],
+          [/cardiac|arrhythm|heart|syncope|qt.?(interval|prolonga)|repolariz/i, `You are thinking along the right lines. The ECG shows QTc 480 ms — well above the male threshold of 440 ms. A prolonged QT interval specifically predisposes to a ventricular arrhythmia called torsades de pointes. <strong>Which inherited condition causes this, and why does exercise act as the specific trigger?</strong>`],
+          [/epilep|seizure|neuro|brain|eeg/i, `Neurological causes are a reasonable initial thought, but notice: no post-ictal phase, no EEG abnormality, and crucially — syncope occurs <em>only</em> during exercise. Now focus on the ECG. <strong>What does a QTc of 480 ms represent, and which cardiac condition does it point to?</strong>`],
+        ],
+        fallback: `Let's focus on the most abnormal finding in the referral: the <strong>QTc of 480 ms</strong> (normal ≤440 ms). Combined with exercise-triggered syncope in a structurally normal heart — <strong>which inherited cardiac condition fits this pattern, and what is its genetic basis?</strong>`
+      },
+      { bot: `Correct — LQTS type 1 is your diagnosis. IKs channel dysfunction is the core mechanism. One more step before the family arrives: <strong>both parents are described as clinically healthy. How do you explain this in an autosomal dominant condition? And what are the immediate clinical implications for the parents today?</strong>`,
+        match: [
+          [/de.?novo|new.?mut|spontan|not.?inherit/i, `Exactly. A de novo variant in <em>KCNQ1</em> is the most likely explanation — approximately 5–10% of LQTS1 cases arise this way. But incomplete penetrance in a carrier parent is equally possible (~20–25% of carriers remain asymptomatic). <strong>You cannot distinguish these without parental genetic testing</strong> — and the distinction changes the recurrence risk for siblings dramatically. This is your immediate action point.`],
+          [/penetranc|asymptom|carrier|not.?show|silent/i, `Correct — incomplete penetrance is a key feature of LQTS1. A parent may carry the same <em>KCNQ1</em> variant but never experience symptoms, appearing "healthy." This is also why cascade genetic testing of both parents is essential — one of them may be a silent carrier at significant cardiac risk. A de novo event is the other possibility. <strong>Only genetic testing of the parents can distinguish these scenarios.</strong>`],
+          [/dominant|inherit|genetic|auto/i, `Good clinical thinking. The explanation requires distinguishing two possibilities: (1) a de novo variant that arose spontaneously in Luca — low recurrence risk for the parents' future children; (2) a parent who is an asymptomatic carrier with reduced penetrance — 50% recurrence risk. Both parents should receive genetic testing, and likely an ECG as well to screen for a subclinical prolonged QT interval.`],
+        ],
+        fallback: `In autosomal dominant LQTS1, two explanations apply when parents appear unaffected: (1) <strong>de novo variant</strong> — new pathogenic variant arising in a germ cell, not inherited; (2) <strong>reduced penetrance</strong> — a parent carries the pathogenic allele but is asymptomatic (~20% of KCNQ1 carriers). Parental genetic testing and ECG screening are mandatory to distinguish these — they yield very different recurrence risk figures for siblings.`,
+        reveal: `Key learning points: LQTS1 is caused by loss-of-function variants in KCNQ1 (IKs channel). Exercise triggers arrhythmia because adrenergic stimulation normally increases IKs to shorten the action potential — this compensatory mechanism fails in LQTS1. Unaffected parents require evaluation for de novo variant vs. reduced penetrance carrier.`
+      }
+    ]
+  },
+
+  // ── S2: PEDIGREE BUILDER ──────────────────────────────────────
+  { id:2, type:'pedigree', label:'Station 2 of 6', title:'Draw the Pedigree',
+    left: `
+      <div class="stn-lbl">Station 2 of 6</div>
+      <div class="stn-title">Draw the Pedigree</div>
+      <div class="info-chip">
+        <h4>Your Task</h4>
+        <p>Using the family information from the referral letter, construct the pedigree for Luca's family. Use the toolbar on the right to place symbols. When you are satisfied, click <strong>Validate Pedigree</strong>.</p>
+      </div>
+      <div class="info-chip">
+        <h4>Family Summary</h4>
+        <ul>
+          <li>Generation I: Father (42 yrs, healthy) and Mother (40 yrs, healthy)</li>
+          <li>Generation II: Luca (12 yrs, affected — proband). No known siblings.</li>
+          <li>No known affected relatives on either side</li>
+        </ul>
+      </div>
+      <div class="info-chip">
+        <h4>Standard Pedigree Conventions</h4>
+        <ul>
+          <li>Square = male; Circle = female</li>
+          <li>Filled symbol = affected individual</li>
+          <li>Dot inside = obligate carrier</li>
+          <li>Arrow = proband (index patient under study)</li>
+          <li>Horizontal line = mating pair; vertical/angled = descent</li>
+          <li>Generations labelled I, II… (top to bottom)</li>
+          <li>Individuals numbered left to right within generation</li>
+        </ul>
+      </div>
+      <div class="info-chip">
+        <h4>After the Pedigree</h4>
+        <p>Once validated, consider: what inheritance pattern does this pedigree suggest? What are the implications for cascade testing?</p>
+      </div>`,
+  },
+
+  // ── S3: VCF ANALYSIS ─────────────────────────────────────────
+  { id:3, type:'vcf', label:'Station 3 of 6', title:'Exome Sequencing Results',
+    left: `
+      <div class="stn-lbl">Station 3 of 6</div>
+      <div class="stn-title">Exome Results Arrive</div>
+      <div class="doc">
+        <div class="doc-header">
+          <div class="doc-from"><strong>From:</strong> Medical Genomics Laboratory, University Hospital Bonn<br><strong>To:</strong> Clinical Genetics — Dr. Schnappauf</div>
+          <div class="doc-stamp">GENOMICS REPORT<br>2025-12-01</div>
+        </div>
+        <h4>Sequencing Summary</h4>
+        <ul>
+          <li>Method: Clinical Exome Sequencing (CES), Illumina NovaSeq 6000</li>
+          <li>Reference genome: GRCh38 / hg38</li>
+          <li>Mean coverage: 105× (>98% of target bases at 20×)</li>
+          <li>Total variants called: <strong>~24,800 coding variants</strong> vs. reference</li>
+          <li>After QC filter: 21,430 variants pass quality thresholds</li>
+        </ul>
+        <h4>Clinical Panel Applied</h4>
+        <p>Hereditary Cardiac Arrhythmia Panel (43 genes incl. KCNQ1, KCNH2, SCN5A, RYR2, KCNE1, KCNE2, CACNA1C, ANK2)</p>
+        <h4>Raw Data File</h4>
+        <span class="mono">LUCA_M_exome_GRCh38.vcf<br>Format: VCFv4.2 | 12 selected variants shown</span>
+        <div class="alert">📋 The VCF file has been transferred to your workstation. Please analyze and identify the clinically relevant variant(s).</div>
+      </div>
+      <div class="info-chip">
+        <h4>Recommended External Tools</h4>
+        <ul>
+          <li><strong>VarSome</strong> — comprehensive ACMG classification engine</li>
+          <li><strong>Franklin (Genoox)</strong> — clinical variant interpretation</li>
+          <li><strong>gnomAD</strong> — population allele frequency browser</li>
+          <li><strong>ClinVar</strong> — variant-disease assertion database</li>
+          <li><strong>OMIM</strong> — gene-phenotype relationships</li>
+        </ul>
+      </div>`,
+  },
+
+  // ── S4: VARIANT ANALYSIS (Chat) ──────────────────────────────
+  { id:4, type:'chat', label:'Station 4 of 6', title:'Variant Characterisation',
+    left: `
+      <div class="stn-lbl">Station 4 of 6</div>
+      <div class="stn-title">Variant Characterisation</div>
+      <div class="doc">
+        <div class="doc-stamp" style="margin-bottom:.8rem">VARIANT ANNOTATION REPORT</div>
+        <h4>Candidate Variant</h4>
+        <span class="mono">Gene:  KCNQ1 (chromosome 11p15.5, minus strand)
+Transcript:  NM_000218.3
+DNA change:  c.64G>T
+Protein:  p.(Gly22Cys)
+Zygosity:  Heterozygous
+Type:  Missense substitution</span>
+        <h4>Gene Function</h4>
+        <ul>
+          <li>KCNQ1 encodes Kv7.1 — α-subunit of the cardiac IKs (slow delayed rectifier K⁺) channel</li>
+          <li>IKs = KCNQ1 (pore-forming) + KCNE1 (regulatory β-subunit)</li>
+          <li>IKs terminates ventricular repolarization (cardiac action potential Phase 3)</li>
+          <li>During exercise: adrenergic stimulation amplifies IKs → faster repolarization → shorter QT</li>
+        </ul>
+        <h4>Computational Predictions</h4>
+        <ul>
+          <li>REVEL score: 0.82 (>0.75 = likely pathogenic)</li>
+          <li>CADD Phred: 31 (>20 = top 1% deleterious)</li>
+          <li>AlphaMissense: 0.91 (likely pathogenic)</li>
+          <li>SpliceAI: 0.01 (no splice impact)</li>
+        </ul>
+        <h4>Population Frequency</h4>
+        <ul>
+          <li>gnomAD v4: <strong>0 / 730,947 alleles</strong> (absent)</li>
+          <li>Not present in any ethnic subgroup</li>
+        </ul>
+        <h4>Protein Domain</h4>
+        <ul>
+          <li>Gly22 located in the N-terminal intracellular region adjacent to S1 transmembrane helix</li>
+          <li>Glycine → Cysteine: loss of structural flexibility; gain of bulky thiol group</li>
+          <li>31 other pathogenic KCNQ1 variants cluster in this region (ClinVar/HGMD)</li>
+          <li>Gly22 conserved in vertebrates (conservation score: 0.98)</li>
+        </ul>
+      </div>
+      <div class="info-chip" style="margin-top:.8rem">
+        <h4>KCNQ1 / Kv7.1 Channel — Transmembrane Topology</h4>
+        <svg viewBox="0 0 480 138" style="background:#050d18;border-radius:7px;width:100%;display:block">
+          <!-- Membrane bilayer -->
+          <rect x="0" y="46" width="480" height="11" fill="#0a1c2d" rx="0"/>
+          <rect x="0" y="75" width="480" height="11" fill="#0a1c2d" rx="0"/>
+          <text x="3" y="55" font-size="7.5" fill="#243c56" font-family="sans-serif">extracellular</text>
+          <text x="3" y="84" font-size="7.5" fill="#243c56" font-family="sans-serif">intracellular</text>
+          <!-- S1 -->
+          <rect x="90" y="43" width="16" height="42" rx="2" fill="#132b42" stroke="#1e4a6a" stroke-width="1.2"/>
+          <text x="98" y="95" text-anchor="middle" font-size="7.5" fill="#4a8ab0" font-family="sans-serif" font-weight="700">S1</text>
+          <!-- S2 -->
+          <rect x="130" y="43" width="16" height="42" rx="2" fill="#132b42" stroke="#1e4a6a" stroke-width="1.2"/>
+          <text x="138" y="95" text-anchor="middle" font-size="7.5" fill="#4a8ab0" font-family="sans-serif" font-weight="700">S2</text>
+          <!-- S3 -->
+          <rect x="170" y="43" width="16" height="42" rx="2" fill="#132b42" stroke="#1e4a6a" stroke-width="1.2"/>
+          <text x="178" y="95" text-anchor="middle" font-size="7.5" fill="#4a8ab0" font-family="sans-serif" font-weight="700">S3</text>
+          <!-- S4 voltage sensor highlighted -->
+          <rect x="210" y="43" width="16" height="42" rx="2" fill="#1a3a5c" stroke="#4b8ef0" stroke-width="1.5"/>
+          <text x="218" y="95" text-anchor="middle" font-size="7.5" fill="#4b8ef0" font-family="sans-serif" font-weight="700">S4</text>
+          <text x="218" y="38" text-anchor="middle" font-size="6.5" fill="#4b8ef0" font-family="sans-serif">voltage sensor</text>
+          <!-- S4-S5 linker -->
+          <line x1="226" y1="85" x2="262" y2="85" stroke="#243c56" stroke-width="1"/>
+          <!-- S5 -->
+          <rect x="262" y="43" width="16" height="42" rx="2" fill="#132b42" stroke="#1e4a6a" stroke-width="1.2"/>
+          <text x="270" y="95" text-anchor="middle" font-size="7.5" fill="#4a8ab0" font-family="sans-serif" font-weight="700">S5</text>
+          <!-- Pore helix -->
+          <path d="M 278,57 Q 298,48 318,57" stroke="#1e6a8a" stroke-width="1.2" fill="none"/>
+          <text x="298" y="47" text-anchor="middle" font-size="6.5" fill="#1e8aaa" font-family="sans-serif">pore</text>
+          <!-- S6 -->
+          <rect x="318" y="43" width="16" height="42" rx="2" fill="#132b42" stroke="#1e4a6a" stroke-width="1.2"/>
+          <text x="326" y="95" text-anchor="middle" font-size="7.5" fill="#4a8ab0" font-family="sans-serif" font-weight="700">S6</text>
+          <!-- Extracellular loops -->
+          <path d="M 106,43 Q 120,26 130,43" stroke="#1a3050" stroke-width="1" fill="none"/>
+          <path d="M 146,43 Q 160,26 170,43" stroke="#1a3050" stroke-width="1" fill="none"/>
+          <path d="M 186,43 Q 200,26 210,43" stroke="#1a3050" stroke-width="1" fill="none"/>
+          <!-- Intracellular loops -->
+          <path d="M 106,85 Q 120,102 130,85" stroke="#1a3050" stroke-width="1" fill="none"/>
+          <path d="M 146,85 Q 160,102 170,85" stroke="#1a3050" stroke-width="1" fill="none"/>
+          <path d="M 226,85 Q 244,102 262,85" stroke="#1a3050" stroke-width="1" fill="none"/>
+          <!-- N-terminus intracellular -->
+          <line x1="50" y1="108" x2="90" y2="85" stroke="#243c56" stroke-width="1" stroke-dasharray="2,2"/>
+          <text x="30" y="112" text-anchor="middle" font-size="7.5" fill="#3d5570" font-family="sans-serif">N-term</text>
+          <!-- Gly22 variant marker -->
+          <circle cx="55" cy="122" r="8" fill="none" stroke="#f87171" stroke-width="1.8"/>
+          <text x="55" y="126" text-anchor="middle" font-size="6.5" fill="#f87171" font-family="sans-serif" font-weight="700">G22C</text>
+          <line x1="55" y1="114" x2="55" y2="108" stroke="#f87171" stroke-width="1" stroke-dasharray="2,2"/>
+          <text x="55" y="136" text-anchor="middle" font-size="6" fill="#f87171" font-family="sans-serif">variant site</text>
+          <!-- C-terminus intracellular -->
+          <line x1="334" y1="85" x2="370" y2="108" stroke="#243c56" stroke-width="1" stroke-dasharray="2,2"/>
+          <text x="390" y="112" text-anchor="middle" font-size="7.5" fill="#3d5570" font-family="sans-serif">C-term</text>
+          <!-- KCNE1 beta subunit -->
+          <rect x="420" y="50" width="20" height="28" rx="2" fill="#121e30" stroke="#243c56" stroke-width="1.2"/>
+          <text x="430" y="62" text-anchor="middle" font-size="6.5" fill="#2d4a6a" font-family="sans-serif">KCNE1</text>
+          <text x="430" y="72" text-anchor="middle" font-size="6" fill="#243c56" font-family="sans-serif">β-sub</text>
+        </svg>
+        <p style="font-size:.75rem;color:var(--muted);margin-top:.4rem">Kv7.1 topology: 6 transmembrane segments (S1-S6) with intracellular N- and C-termini. S4 carries the voltage sensor (+++ charges). The S5-S6 loop forms the K+ selectivity filter. Gly22 (red) lies in the N-terminal domain proximal to S1 — a region critical for subunit tetramerization and interaction with KCNE1. This position is a mutational hotspot: 31 known pathogenic KCNQ1 variants cluster here (PM1).</p>
+      </div>`,
+    chat: [
+      { bot: `You have identified <strong>KCNQ1 NM_000218.3:c.64G>T p.(Gly22Cys)</strong> as your candidate variant. <br><br>Explain the complete molecular chain of events from this amino acid substitution to Luca's ECG finding — why does Gly→Cys at position 22 produce a QTc of 480 ms?`,
+        match: [
+          [/loss.?of.?function|lof|reduc.*(iks|current|channel)|dysfunction|disrupt/i, `Correct — this is a loss-of-function mechanism. Now push deeper: <strong>why does exercise specifically worsen the situation?</strong> A healthy person's QT interval shortens during exercise. What is the molecular mechanism for this shortening, and why does it fail in Luca?`],
+          [/iks|potassium|repolariz|action.?potential|phase.?3/i, `Good — you've connected the variant to the IKs current and repolarization. Now: <strong>why is the exercise trigger so specific to LQTS1?</strong> Think about adrenergic signalling during physical exertion and its effects on IKs activity. What fails in Luca that works in a healthy child?`],
+          [/gly.*cys|misss|amino.?acid|structur|fold|conforma/i, `Good structural reasoning. Gly→Cys changes both flexibility (glycine is the most flexible amino acid) and chemistry (cysteine has a reactive thiol). This disrupts channel function — most likely channel gating or assembly with KCNE1. <strong>Now trace the downstream consequence: reduced IKs → ? → QTc 480 ms → ? during exercise.</strong>`],
+        ],
+        fallback: `Start from first principles: KCNQ1 encodes the pore-forming subunit of the IKs channel. IKs carries potassium current outward during cardiac repolarization. <strong>What happens to ventricular repolarization — and therefore the QT interval — when IKs current is reduced? And then: why does exercise specifically trigger arrhythmia?</strong>`
+      },
+      { bot: `Excellent. Now a clinical decision point: your consultant radiologist suggests ordering in vitro functional studies before classifying the variant. <br><br><strong>Is functional data necessary before you can classify this variant and act clinically? Walk through the ACMG evidence categories you already have available.</strong>`,
+        match: [
+          [/pm1|pm2|pm6|pp3|pp4|acmg|criteria|pathogen|likely.?path/i, `Precisely. You already have PM1 (functional domain hotspot), PM2 (absent from gnomAD), PM6 (parents appear healthy — assumed de novo), PP3 (three concordant in silico predictions), and PP4 (phenotype highly specific for KCNQ1/LQTS1). Three moderate + two supporting criteria = <strong>Likely Pathogenic</strong> per ACMG 2015 rules — <em>without</em> functional data. Functional studies (PS3) would upgrade to Pathogenic, but are not required to act clinically.`],
+          [/no.*functional|not.*need.*functional|enough.*evidence|sufficient/i, `Correct clinical judgement. ACMG rules allow Likely Pathogenic classification based on existing population, computational, domain, and phenotype evidence — no functional data required. You already have enough to act. In the next station, you will apply each criterion formally.`],
+          [/functional|in.?vitro|patch.?clamp|electrophys/i, `Functional studies would be valuable — they would apply criterion PS3 (Strong) and potentially elevate the classification to Pathogenic. But they are not mandatory before clinical action. The ACMG framework specifically allows classification and treatment initiation based on genetic and clinical evidence alone. <strong>What existing evidence do you already have that supports pathogenicity?</strong>`],
+        ],
+        fallback: `Consider what the ACMG 2015 framework (Richards et al.) allows: classification is possible from a combination of population frequency data, computational predictions, protein domain information, and phenotype specificity — all of which you already have. <strong>Do you have enough evidence to classify this variant without additional functional studies? Name the applicable ACMG criteria.</strong>`,
+        reveal: `KCNQ1 c.64G>T p.(Gly22Cys) acts via loss-of-function: reduced IKs → delayed action potential repolarization → prolonged QT interval. During exercise, adrenergic stimulation normally amplifies IKs to accelerate repolarization — this fails in LQTS1, creating the arrhythmogenic window for torsades de pointes. Available ACMG evidence (PM1, PM2, PM6, PP3, PP4) is sufficient for Likely Pathogenic classification without functional data.`
+      }
+    ]
+  },
+
+  // ── S5: ACMG CLASSIFICATION ───────────────────────────────────
+  { id:5, type:'acmg', label:'Station 5 of 6', title:'ACMG/AMP Classification',
+    left: `
+      <div class="stn-lbl">Station 5 of 6</div>
+      <div class="stn-title">Apply ACMG/AMP Criteria</div>
+      <div class="info-chip">
+        <h4>Your Task</h4>
+        <p>You are completing the formal variant classification for the genetics report. Apply the ACMG/AMP 2015 criteria (Richards et al., <em>Genet Med</em> 2015) to KCNQ1 c.64G>T p.(Gly22Cys). Select all applicable criteria, then assign the final classification.</p>
+      </div>
+      <div class="info-chip">
+        <h4>Evidence Available</h4>
+        <table class="ev-table">
+          <thead><tr><th>Category</th><th>Finding</th></tr></thead>
+          <tbody>
+            <tr><td>Population</td><td>Absent from gnomAD v4 (0/730,947 alleles)</td></tr>
+            <tr><td>Domain</td><td>N-terminal / S1-proximal; 31 known pathogenic KCNQ1 variants in this region</td></tr>
+            <tr><td>Segregation</td><td>Both parents clinically healthy; parental testing pending → assumed de novo (unconfirmed)</td></tr>
+            <tr><td>In silico</td><td>REVEL 0.82, CADD 31, AlphaMissense 0.91 — all predict damaging</td></tr>
+            <tr><td>Phenotype</td><td>Exercise syncope + QTc 480 ms highly specific for LQTS1/KCNQ1</td></tr>
+            <tr><td>Variant type</td><td>Missense — NOT a null variant (no frameshift, no stop codon)</td></tr>
+            <tr><td>MAF</td><td>Not >5% in any population database</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-chip">
+        <h4>ACMG Combining Rules (Likely Pathogenic)</h4>
+        <ul>
+          <li>1 Strong (PS) + 1–2 Moderate (PM), OR</li>
+          <li>1 Strong (PS) + ≥2 Supporting (PP), OR</li>
+          <li><strong>≥3 Moderate (PM)</strong>, OR</li>
+          <li>2 Moderate (PM) + ≥2 Supporting (PP)</li>
+        </ul>
+      </div>`,
+    acmgItems: [
+      {code:'PVS1',desc:'Null variant (nonsense/frameshift/splice) — gene intolerant to LoF',correct:false},
+      {code:'PM1',desc:'Mutational hotspot / established functional domain, no benign variation',correct:true},
+      {code:'PM2',desc:'Absent from population databases (gnomAD)',correct:true},
+      {code:'PM6',desc:'Assumed de novo — paternity/maternity unconfirmed',correct:true},
+      {code:'PP3',desc:'Multiple concordant in silico tools predict damaging effect',correct:true},
+      {code:'PP4',desc:'Patient phenotype highly specific for single-gene disease',correct:true},
+      {code:'BA1',desc:'MAF >5% in population databases — stand-alone benign',correct:false},
+      {code:'BP4',desc:'Multiple concordant in silico tools predict benign/tolerated effect',correct:false}
+    ],
+    correctClass:'Likely Pathogenic',
+    classOptions:['Pathogenic','Likely Pathogenic','Uncertain Significance (VUS)','Likely Benign','Benign'],
+    fbCriteriaOK:`PM1 + PM2 + PM6 + PP3 + PP4 correctly identified. Three moderate criteria (PM1, PM2, PM6) alone meet the ACMG rule for Likely Pathogenic (≥3 PM). PVS1 does not apply — this is a missense variant, not a null/truncating change. BA1 does not apply — MAF is 0. BP4 does not apply — all in silico tools predict damaging, not tolerated.`,
+    fbCriteriaErr:`Review your selection. PVS1 applies only to null variants (stop-gained, frameshift, canonical ±1,2 splice-site) — p.(Gly22Cys) is a missense. BA1 requires MAF >5%; this variant is absent from gnomAD. BP4 applies when in silico tools predict tolerated — here REVEL (0.82), CADD (31), and AlphaMissense (0.91) all predict damaging, the opposite.`,
+    fbClassOK:`Correct — Likely Pathogenic. Three moderate criteria (PM1 + PM2 + PM6) fulfil the ACMG rule. PP3 and PP4 add further supporting weight. Note: if parental testing confirms absence in both parents, PM6 upgrades to PS2 (confirmed de novo, Strong evidence), which together with PM1 + PM2 + PP3 + PP4 would elevate the classification to <strong>Pathogenic</strong>.`,
+    fbClassErr:`Re-examine the combining rules. PM1 + PM2 + PM6 = three Moderate criteria → Likely Pathogenic (rule: ≥3 PM = LP). Pathogenic requires Very Strong (PVS1) or Strong (PS1–PS4) evidence, which is absent here. VUS applies only when evidence is contradictory or insufficient — here all criteria point toward pathogenicity with no opposing benign evidence.`
+  },
+
+  // ── S6: CLINICAL DECISION (Chat) ─────────────────────────────
+  { id:6, type:'chat', label:'Station 6 of 6', title:'Clinical Decision & Counselling',
+    left: `
+      <div class="stn-lbl">Station 6 of 6</div>
+      <div class="stn-title">Clinical Decision & Counselling</div>
+      <div class="doc">
+        <div class="doc-stamp" style="margin-bottom:.8rem">GENETICS REPORT — FINAL</div>
+        <h4>Summary</h4>
+        <ul>
+          <li>Patient: Luca M., 12 years, male</li>
+          <li>Phenotype: Exercise-induced syncope (×2), QTc 480 ms, structurally normal heart</li>
+          <li>Variant: KCNQ1 NM_000218.3:c.64G>T p.(Gly22Cys), heterozygous</li>
+          <li>Classification: <strong>Likely Pathogenic — Long QT Syndrome type 1 (LQTS1)</strong></li>
+          <li>Applied criteria: PM1 + PM2 + PM6 + PP3 + PP4</li>
+        </ul>
+        <h4>Pending Actions</h4>
+        <ul>
+          <li>Parental genetic testing (to confirm de novo vs. inherited)</li>
+          <li>ECG screening of both parents</li>
+          <li>Immediate clinical management decision for Luca</li>
+          <li>Family counselling regarding risk and lifestyle</li>
+        </ul>
+        <div class="alert">🏥 Luca and his parents are waiting in the consultation room. You are the attending geneticist. What do you tell them?</div>
+      </div>
+      <div class="info-chip">
+        <h4>LQTS1 Evidence Base</h4>
+        <ul>
+          <li>Beta-blockers (propranolol/nadolol) reduce syncope by >70% and SCD risk significantly in LQTS1</li>
+          <li>ICD: reserved for cardiac arrest survivors or refractory symptoms on beta-blockers</li>
+          <li>Exercise restriction: avoid competitive sports, unmonitored swimming</li>
+          <li>Avoid QT-prolonging medications (CredibleMeds.org)</li>
+          <li>Cascade genetic testing of all first-degree relatives</li>
+        </ul>
+      </div>`,
+    chat: [
+      { bot: `Luca and his parents are sitting across from you. You have the genetic report in your hands: KCNQ1 c.64G>T — <strong>Likely Pathogenic</strong> for LQTS1.<br><br><strong>What is your immediate management plan, and how do you explain it to a 12-year-old and his parents in understandable terms?</strong>`,
+        match: [
+          [/beta.?blocker|propranolol|nadolol|medication|drug|treat/i, `Good — beta-blockers are the correct first-line choice for LQTS1. Now think about the parents: one of them may unknowingly carry the same variant. <strong>What do you recommend for the parents today — both clinically and genetically? And what recurrence risk do you quote for a future sibling?</strong>`],
+          [/sport|exercise|restrict|swim|activit|school/i, `Activity restrictions are essential but insufficient alone for a symptomatic patient. <strong>What pharmacological therapy do you initiate, and why specifically beta-blockers rather than, say, an implantable defibrillator as first-line?</strong>`],
+          [/icd|defibrillator|implant|device/i, `An ICD is NOT first-line for LQTS1. ICD implantation carries significant risks — lead complications, inappropriate shocks, psychological burden — and is reserved for cardiac arrest survivors or patients with breakthrough events on medical therapy. <strong>What is the proven first-line pharmacological treatment for LQTS1, and what is the evidence for its efficacy?</strong>`],
+          [/counsel|explain|talk|family|parent/i, `Communication is critical here, but the clinical plan must accompany it. The family needs to understand: (1) what the diagnosis means, (2) the treatment plan, (3) lifestyle changes, (4) the implication for both parents' own health. <strong>Walk me through each of those four points as you would explain them in the consultation room.</strong>`],
+        ],
+        fallback: `A Likely Pathogenic classification in a symptomatic patient warrants immediate action. Think through three domains: <strong>(1) pharmacological treatment for Luca, (2) lifestyle restrictions, (3) family implications</strong>. Start with whichever you feel most confident about.`
+      },
+      { bot: `Good clinical reasoning. Now the harder question: <strong>Luca's mother starts crying and asks "Does this mean I might also have this? Could I drop dead tomorrow?"</strong><br><br>How do you respond — both to her fear, and to her actual medical question?`,
+        match: [
+          [/penetranc|asymptom|ecg|test.*parent|parent.*test|cascade/i, `Excellent clinical and communication approach. Incomplete penetrance means she could carry the variant without ever having symptoms — but that doesn't mean the risk is zero. She needs an ECG today (QTc measurement takes 2 minutes), and genetic testing should follow. <strong>If her ECG is normal and genetic testing shows she carries the variant, what do you do?</strong>`],
+          [/low.?risk|not.*worry|probably.*fine|reassure/i, `Be careful here — reassurance must be evidence-based. If one parent carries this KCNQ1 variant, they have a real (though potentially incomplete) penetrance risk. An ECG takes 2 minutes and should happen today. <strong>What is the correct clinical management for an adult carrier of a KCNQ1 Likely Pathogenic variant — even if they are currently asymptomatic?</strong>`],
+          [/ecg|test|check|genetic|cardiac/i, `Exactly right. Step one: ECG for both parents now (QTc measurement). Step two: genetic testing to determine whether one parent carries Luca's variant or whether it is truly de novo. If a parent is a carrier, they need assessment and likely beta-blocker therapy, even if currently asymptomatic. <strong>What recurrence risk figure would you quote for future siblings of Luca?</strong>`],
+          [/de.?novo|inherit|carrier/i, `Yes — the key uncertainty is de novo vs. inherited. If truly de novo: recurrence risk for future siblings is <1%. If inherited from a carrier parent: each future sibling has a 50% chance of inheriting the variant, with variable penetrance. This is why confirming the de novo status is clinically urgent — it changes the counselling for the family's reproductive planning.`],
+        ],
+        fallback: `The mother needs both emotional support and clinical information. Practically: she needs an ECG today to measure her QTc, and genetic testing to determine whether she carries the same KCNQ1 variant. If she is a carrier, beta-blocker therapy and lifestyle counselling apply to her as well — even if she has never had symptoms (reduced penetrance). The recurrence risk for siblings: 50% if she is a carrier, <1% if Luca's variant is de novo.`,
+        reveal: `Management of LQTS1 with a Likely Pathogenic variant in a symptomatic child: immediate beta-blocker therapy (propranolol or nadolol); activity restriction from competitive sports and unmonitored swimming; avoidance of QT-prolonging medications; ECG and genetic testing of both parents; cascade testing of all first-degree relatives. ICD is not first-line — it is reserved for high-risk refractory cases. Recurrence risk depends on whether the variant is de novo (confirmed by parental testing) or inherited from a carrier parent with reduced penetrance.`
+      }
+    ]
+  }
+
+  ] // end stations
+}; // end CASE_LUCA
+
+const CASES = { luca: CASE_LUCA };
+
+// ═══════════════════════════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════════════════════════
+let CUR_CASE = null, CUR_ST = 0, ST_DONE = [];
+let PED = null; // PedigreeBuilder instance
+let acmgSel = new Set(), acmgSubmitted = false, classSubmitted = false;
+
+// ═══════════════════════════════════════════════════════
+// LANDING
+// ═══════════════════════════════════════════════════════
+function renderLanding() {
+  document.getElementById('patient-grid').innerHTML = PATIENTS.map(p => `
+    <div class="card ${p.on?'on':'off'}" ${p.on?`onclick="openCase('${p.id}')"`:''}>
+      ${!p.on?'<div class="lock-tag">🔒</div>':''}
+      <div class="avatar">${p.emoji}</div>
+      <h3>${p.name}</h3>
+      <div class="age">${p.age} · ${p.sex==='M'?'Male':'Female'}</div>
+      <div class="cc">${p.cc}</div>
+      <div class="sbadge">${p.session}</div>
+    </div>`).join('');
+}
+function showLanding() {
+  document.getElementById('landing').style.display='block';
+  document.getElementById('case-view').style.display='none';
+}
+
+// ═══════════════════════════════════════════════════════
+// CASE NAVIGATION
+// ═══════════════════════════════════════════════════════
+function openCase(id) {
+  const cd = CASES[id]; if(!cd) return;
+  CUR_CASE=cd; CUR_ST=0;
+  ST_DONE = new Array(cd.stations.length).fill(false);
+  acmgSel=new Set(); acmgSubmitted=false; classSubmitted=false;
+  Object.keys(activeChatEngines).forEach(k => delete activeChatEngines[k]);
+  document.getElementById('landing').style.display='none';
+  const cv=document.getElementById('case-view');
+  cv.style.display='flex'; cv.style.flexDirection='column';
+  document.getElementById('c-name').textContent=cd.name;
+  document.getElementById('c-sub').textContent=cd.subtitle;
+  renderSteps(); renderStation(0);
+}
+
+function renderSteps() {
+  const n=CUR_CASE.stations.length;
+  document.getElementById('steps').innerHTML = CUR_CASE.stations.map((s,i)=>{
+    const cls = ST_DONE[i]?'done':(i===CUR_ST?'act':'');
+    return `<div class="dot ${cls}">${ST_DONE[i]?'✓':i+1}</div>${i<n-1?`<div class="conn ${ST_DONE[i]?'done':''}"></div>`:''}`
+  }).join('');
+}
+
+function goNext() {
+  ST_DONE[CUR_ST]=true;
+  if (CUR_ST < CUR_CASE.stations.length-1) {
+    CUR_ST++;
+    acmgSel=new Set(); acmgSubmitted=false; classSubmitted=false;
+    renderSteps(); renderStation(CUR_ST);
+    document.getElementById('l-panel').scrollTop=0;
+    document.getElementById('r-panel').scrollTop=0;
+  } else {
+    ST_DONE[CUR_ST]=true; renderSteps(); renderCompletion();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// STATION RENDERER
+// ═══════════════════════════════════════════════════════
+function renderStation(idx) {
+  const st = CUR_CASE.stations[idx];
+  document.getElementById('l-panel').innerHTML = st.left || '';
+  const rp = document.getElementById('r-panel');
+
+  if (st.type === 'chat') {
+    rp.innerHTML = `<div class="stn-lbl">${st.label}</div><div class="stn-title">${st.title}</div><div id="chat-area-${idx}" class="chat-wrap"></div>`;
+    const eng = new ChatEngine(`chat-area-${idx}`, st.chat, goNext);
+    activeChatEngines[`chat-area-${idx}`] = eng;
+    eng.mount();
+
+  } else if (st.type === 'pedigree') {
+    rp.innerHTML = `<div class="stn-lbl">${st.label}</div><div class="stn-title">${st.title}</div><div id="ped-mount"></div>`;
+    PED = new PedigreeBuilder('ped-mount');
+
+  } else if (st.type === 'vcf') {
+    renderVCFStation(st, rp);
+
+  } else if (st.type === 'acmg') {
+    renderACMGStation(st, rp);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// PEDIGREE BUILDER
+// ═══════════════════════════════════════════════════════
+class PedigreeBuilder {
+  constructor(mountId) {
+    this.mount = document.getElementById(mountId);
+    // individuals: {id, gen, pos, sex, status} sex: 'M'|'F'|null, status: 'unaffected'|'affected'|'carrier'|'unknown'
+    this.inds = [];
+    this.nextId = 1;
+    this.mode = 'add-M'; // current tool
+    this.probandId = null;
+    this.render();
+  }
+
+  addInd(gen, x, y, sex, status='unaffected') {
+    const id = this.nextId++;
+    this.inds.push({id, gen, x, y, sex, status, isProband: false});
+    this.renderSVG();
+  }
+
+  svgClick(e) {
+    const svg = this.mount.querySelector('svg');
+    const rect = svg.getBoundingClientRect();
+    const scaleX = 560 / rect.width, scaleY = 320 / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    // Check click on existing individual
+    for (const ind of this.inds) {
+      const dx=x-ind.x, dy=y-ind.y;
+      if (dx*dx+dy*dy < 400) {
+        if (this.mode === 'proband') { this.probandId=ind.id; this.renderSVG(); return; }
+        if (this.mode === 'delete') { this.inds=this.inds.filter(i=>i.id!==ind.id); if(this.probandId===ind.id) this.probandId=null; this.renderSVG(); return; }
+        if (this.mode === 'toggle') {
+          const states=['unaffected','affected','carrier'];
+          const cur=states.indexOf(ind.status);
+          ind.status=states[(cur+1)%states.length];
+          this.renderSVG(); return;
+        }
+        return;
+      }
+    }
+    // Place new individual
+    const genY = y < 160 ? 1 : 2;
+    if (this.mode==='add-M') this.addInd(genY, x, y, 'M','unaffected');
+    else if (this.mode==='add-F') this.addInd(genY, x, y, 'F','unaffected');
+  }
+
+  symbolSVG(ind) {
+    const {x,y,sex,status,id,isProband} = ind;
+    let shape='', fill='none', stroke='#6b839e', sw=2;
+    if (status==='affected') fill='#4b8ef0';
+    if (status==='carrier') fill='none';
+    if (sex==='M') {
+      shape = `<rect x="${x-16}" y="${y-16}" width="32" height="32" rx="2" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
+      if (status==='carrier') shape += `<circle cx="${x}" cy="${y}" r="5" fill="#4b8ef0"/>`;
+    } else if (sex==='F') {
+      shape = `<circle cx="${x}" cy="${y}" r="16" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
+      if (status==='carrier') shape += `<circle cx="${x}" cy="${y}" r="5" fill="#4b8ef0"/>`;
+    } else {
+      shape = `<rect x="${x-14}" y="${y-14}" width="28" height="28" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-dasharray="4,2"/>`;
+    }
+    const probandArrow = isProband ? `<line x1="${x-28}" y1="${y+22}" x2="${x-18}" y2="${y+12}" stroke="#6b839e" stroke-width="1.5"/><polygon points="${x-18},${y+12} ${x-28},${y+9} ${x-24},${y+19}" fill="#6b839e"/>` : '';
+    const label = `<text x="${x}" y="${y+32}" text-anchor="middle" font-size="9" fill="#6b839e" font-family="sans-serif">${isProband?'(proband)':''}</text>`;
+    return shape + probandArrow + label;
+  }
+
+  renderSVG() {
+    const svg = this.mount.querySelector('svg'); if(!svg) return;
+    // Draw generation lines
+    let lines = `<text x="22" y="105" font-size="11" fill="#3d5570" font-family="sans-serif">I</text>
+                 <text x="22" y="240" font-size="11" fill="#3d5570" font-family="sans-serif">II</text>
+                 <line x1="40" y1="0" x2="40" y2="320" stroke="#0d1f32" stroke-width="1"/>`;
+    // marriage line between gen1 pair
+    const gen1 = this.inds.filter(i=>i.gen===1).sort((a,b)=>a.x-b.x);
+    const gen2 = this.inds.filter(i=>i.gen===2).sort((a,b)=>a.x-b.x);
+    if (gen1.length>=2) {
+      const l=gen1[0], r=gen1[gen1.length-1];
+      const midX=(l.x+r.x)/2, midY=(l.y+r.y)/2;
+      lines += `<line x1="${l.sex==='M'?l.x+16:l.x+16}" y1="${l.y}" x2="${r.sex==='M'?r.x-16:r.x-16}" y2="${r.y}" stroke="#6b839e" stroke-width="2"/>`;
+      if (gen2.length>0) {
+        lines += `<line x1="${midX}" y1="${midY}" x2="${midX}" y2="${midY+50}" stroke="#6b839e" stroke-width="2"/>`;
+        if (gen2.length>1) {
+          const g2l=gen2[0], g2r=gen2[gen2.length-1];
+          const sibY=g2l.y-20;
+          lines += `<line x1="${g2l.x}" y1="${sibY}" x2="${g2r.x}" y2="${sibY}" stroke="#6b839e" stroke-width="2"/>`;
+          gen2.forEach(c=>{ lines+=`<line x1="${c.x}" y1="${sibY}" x2="${c.x}" y2="${c.y-16}" stroke="#6b839e" stroke-width="2"/>`; });
+          lines += `<line x1="${midX}" y1="${midY+50}" x2="${midX}" y2="${sibY}" stroke="#6b839e" stroke-width="2"/>`;
+        } else {
+          lines += `<line x1="${midX}" y1="${midY+50}" x2="${gen2[0].x}" y2="${gen2[0].y-16}" stroke="#6b839e" stroke-width="2"/>`;
+        }
+      }
+    } else if (gen1.length===1 && gen2.length>0) {
+      gen2.forEach(c=>{ lines+=`<line x1="${gen1[0].x}" y1="${gen1[0].y+16}" x2="${c.x}" y2="${c.y-16}" stroke="#6b839e" stroke-width="2"/>`; });
+    }
+    svg.innerHTML = lines + this.inds.map(i=>this.symbolSVG(i)).join('');
+  }
+
+  validate() {
+    const gen1M = this.inds.filter(i=>i.gen===1&&i.sex==='M');
+    const gen1F = this.inds.filter(i=>i.gen===1&&i.sex==='F');
+    const gen2Aff = this.inds.filter(i=>i.gen===2&&i.status==='affected');
+    const hasProband = this.probandId && this.inds.find(i=>i.id===this.probandId&&i.gen===2);
+    const issues = [];
+    if (gen1M.length===0) issues.push('Generation I is missing an unaffected father (male symbol).');
+    if (gen1F.length===0) issues.push('Generation I is missing an unaffected mother (female symbol).');
+    if (gen1M.some(m=>m.status==='affected')) issues.push('Father is marked as affected — the referral states he is healthy.');
+    if (gen1F.some(f=>f.status==='affected')) issues.push('Mother is marked as affected — the referral states she is healthy.');
+    if (gen2Aff.length===0) issues.push('Generation II is missing an affected individual (Luca).');
+    if (!hasProband) issues.push('No proband arrow assigned in Generation II. Use the Proband tool and click Luca.');
+    const luca = this.inds.find(i=>i.id===this.probandId);
+    if (luca && luca.sex!=='M') issues.push('The proband (Luca) should be male — use a square symbol.');
+    return issues;
+  }
+
+  render() {
+    this.mount.innerHTML = `
+    <div class="ped-wrap">
+      <div class="ped-toolbar">
+        <button class="tool-btn act" id="tb-addM" onclick="pedTool('add-M')">☐ Add Male</button>
+        <button class="tool-btn" id="tb-addF" onclick="pedTool('add-F')">○ Add Female</button>
+        <button class="tool-btn" id="tb-tog" onclick="pedTool('toggle')">◉ Toggle Status</button>
+        <button class="tool-btn" id="tb-prob" onclick="pedTool('proband')">→ Set Proband</button>
+        <button class="tool-btn" id="tb-del" onclick="pedTool('delete')">✕ Delete</button>
+      </div>
+      <svg class="ped-canvas" viewBox="0 0 560 320" height="320" id="ped-svg" onclick="pedClick(event)">
+        <text x="22" y="105" font-size="11" fill="#3d5570" font-family="sans-serif">I</text>
+        <text x="22" y="240" font-size="11" fill="#3d5570" font-family="sans-serif">II</text>
+        <line x1="40" y1="0" x2="40" y2="320" stroke="#0d1f32" stroke-width="1"/>
+        <text x="280" y="95" text-anchor="middle" font-size="11" fill="#1d3450" font-family="sans-serif">← Click here to place Generation I (parents)</text>
+        <text x="280" y="225" text-anchor="middle" font-size="11" fill="#1d3450" font-family="sans-serif">← Click here to place Generation II (Luca)</text>
+      </svg>
+      <div class="ped-help">
+        Tip: Click "Add Male" or "Add Female", then click the canvas to place. Click "Toggle Status" then click a symbol to cycle: unaffected → affected → carrier. Use "Set Proband" then click Luca to add the proband arrow.
+      </div>
+      <div class="ped-actions">
+        <button class="check-ped-btn" onclick="validatePed()">Validate Pedigree</button>
+        <button class="check-ped-btn" onclick="PED && (PED.inds=[],PED.probandId=null,PED.renderSVG())">Reset</button>
+      </div>
+      <div class="ped-feedback" id="ped-fb"></div>
+    </div>
+    <div id="ped-chat-area"></div>`;
+    this.renderSVG();
+  }
+}
+
+function pedTool(t) {
+  if (!PED) return;
+  PED.mode=t;
+  ['add-M','add-F','tog','prob','del'].forEach(id=>{
+    const el=document.getElementById(`tb-${id}`);
+    if(el) el.classList.remove('act');
+  });
+  const map={'add-M':'addM','add-F':'addF','toggle':'tog','proband':'prob','delete':'del'};
+  const el=document.getElementById(`tb-${map[t]||t}`);
+  if(el) el.classList.add('act');
+}
+function pedClick(e) { if(PED) PED.svgClick(e); }
+function validatePed() {
+  if (!PED) return;
+  const issues = PED.validate();
+  const fb = document.getElementById('ped-fb');
+  if (issues.length===0) {
+    fb.className='ped-feedback ok';
+    fb.style.display='block';
+    fb.innerHTML=`<strong>Correct pedigree!</strong> Your pedigree correctly shows: Generation I — unaffected father and unaffected mother; Generation II — affected proband (Luca). This 3-generation pedigree with two healthy parents and one affected child is consistent with autosomal dominant inheritance (de novo variant) or autosomal dominant with incomplete penetrance in a carrier parent. <br><br>Notice that you cannot determine the inheritance pattern from the pedigree alone — parental genetic testing is essential. <button class="next-btn" style="display:inline-block;margin-top:.8rem" onclick="goNext()">Continue to Exome Results →</button>`;
+  } else {
+    fb.className='ped-feedback err';
+    fb.style.display='block';
+    fb.innerHTML='<strong>Pedigree needs revision:</strong><br>' + issues.map(i=>`• ${i}`).join('<br>');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// VCF STATION
+// ═══════════════════════════════════════════════════════
+function renderVCFStation(st, rp) {
+  rp.innerHTML = `
+  <div class="stn-lbl">${st.label}</div>
+  <div class="stn-title">${st.title}</div>
+
+  <div class="vcf-box">
+    <h4>LUCA_M_exome_GRCh38.vcf — 12 selected variants (post-QC, panel-filtered)</h4>
+    <p style="font-size:.77rem;color:#8baac8;margin-bottom:.8rem">Clinical exome · GRCh38 · Illumina NovaSeq 6000 · mean 105× · Hereditary Cardiac Arrhythmia Panel (43 genes). Your task: apply three sequential filters to identify the clinically actionable variant.</p>
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:.76rem;font-family:'SF Mono','Fira Code',monospace">
+      <thead>
+        <tr style="background:#0d2035;color:#4b8ef0">
+          <th style="padding:.45rem .6rem;text-align:left;border-bottom:1px solid #1a2f48;white-space:nowrap">GENE</th>
+          <th style="padding:.45rem .6rem;text-align:left;border-bottom:1px solid #1a2f48;white-space:nowrap">cDNA / Protein</th>
+          <th style="padding:.45rem .6rem;text-align:left;border-bottom:1px solid #1a2f48;white-space:nowrap">gnomAD MAF</th>
+          <th style="padding:.45rem .6rem;text-align:left;border-bottom:1px solid #1a2f48;white-space:nowrap">Consequence</th>
+          <th style="padding:.45rem .6rem;text-align:left;border-bottom:1px solid #1a2f48;white-space:nowrap">GT · GQ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #0f1e2e"><td style="padding:.38rem .6rem;color:#c8d8ec">HFE</td><td style="padding:.38rem .6rem;color:#c8d8ec">c.845G>A · p.Cys282Tyr</td><td style="padding:.38rem .6rem;color:#fde68a">0.065 (6.5%)</td><td style="padding:.38rem .6rem;color:#c8d8ec">Missense</td><td style="padding:.38rem .6rem;color:#c8d8ec">0/1 · 99</td></tr>
+        <tr style="border-bottom:1px solid #0f1e2e"><td style="padding:.38rem .6rem;color:#c8d8ec">TTN</td><td style="padding:.38rem .6rem;color:#c8d8ec">c.52438A>G · p.Ile17480Val</td><td style="padding:.38rem .6rem;color:#c8d8ec">0.00021</td><td style="padding:.38rem .6rem;color:#c8d8ec">Missense</td><td style="padding:.38rem .6rem;color:#fde68a">0/1 · GQ=21</td></tr>
+        <tr style="border-bottom:1px solid #0f1e2e"><td style="padding:.38rem .6rem;color:#c8d8ec">SCN5A</td><td style="padding:.38rem .6rem;color:#c8d8ec">c.1350G>A · p.Lys450=</td><td style="padding:.38rem .6rem;color:#c8d8ec">0.0031</td><td style="padding:.38rem .6rem;color:#fde68a">Synonymous</td><td style="padding:.38rem .6rem;color:#c8d8ec">0/1 · 99</td></tr>
+        <tr style="border-bottom:1px solid #0f1e2e"><td style="padding:.38rem .6rem;color:#c8d8ec">CFTR</td><td style="padding:.38rem .6rem;color:#c8d8ec">c.2562T>C · p.Asp854=</td><td style="padding:.38rem .6rem;color:#fde68a">0.28 (28%)</td><td style="padding:.38rem .6rem;color:#fde68a">Synonymous</td><td style="padding:.38rem .6rem;color:#c8d8ec">0/0 · —</td></tr>
+        <tr style="border-bottom:1px solid #0f1e2e"><td style="padding:.38rem .6rem;color:#c8d8ec">KCNH2</td><td style="padding:.38rem .6rem;color:#c8d8ec">c.2690A>G · p.Asn897Ser</td><td style="padding:.38rem .6rem;color:#fde68a">0.082 (8.2%)</td><td style="padding:.38rem .6rem;color:#c8d8ec">Missense</td><td style="padding:.38rem .6rem;color:#c8d8ec">0/0 · —</td></tr>
+        <tr style="border-bottom:1px solid #0f1e2e"><td style="padding:.38rem .6rem;color:#c8d8ec">KCNQ1</td><td style="padding:.38rem .6rem;color:#c8d8ec">c.1638+47C>T · —</td><td style="padding:.38rem .6rem;color:#fde68a">0.42 (42%)</td><td style="padding:.38rem .6rem;color:#fde68a">Intronic</td><td style="padding:.38rem .6rem;color:#c8d8ec">0/1 · 99</td></tr>
+        <tr style="border-bottom:2px solid #4b8ef0;background:#071828"><td style="padding:.42rem .6rem;color:#7aadde;font-weight:700">KCNQ1</td><td style="padding:.42rem .6rem;color:#e2eaf5;font-weight:700">c.64G>T · p.Gly22Cys</td><td style="padding:.42rem .6rem;color:#34d399;font-weight:700">0 / ABSENT</td><td style="padding:.42rem .6rem;color:#e2eaf5;font-weight:700">Missense</td><td style="padding:.42rem .6rem;color:#e2eaf5">0/1 · GQ=99</td></tr>
+        <tr style="border-bottom:1px solid #0f1e2e"><td style="padding:.38rem .6rem;color:#c8d8ec">KCNQ1</td><td style="padding:.38rem .6rem;color:#c8d8ec">c.1638G>A · p.Ala546=</td><td style="padding:.38rem .6rem;color:#fde68a">0.15 (15%)</td><td style="padding:.38rem .6rem;color:#fde68a">Synonymous</td><td style="padding:.38rem .6rem;color:#c8d8ec">0/0 · —</td></tr>
+        <tr style="border-bottom:1px solid #0f1e2e"><td style="padding:.38rem .6rem;color:#c8d8ec">ABCC9</td><td style="padding:.38rem .6rem;color:#c8d8ec">c.4289G>A · p.Arg1430His</td><td style="padding:.38rem .6rem;color:#c8d8ec">0.000012</td><td style="padding:.38rem .6rem;color:#c8d8ec">Missense</td><td style="padding:.38rem .6rem;color:#fde68a">0/1 · GQ=19</td></tr>
+        <tr style="border-bottom:1px solid #0f1e2e"><td style="padding:.38rem .6rem;color:#c8d8ec">FBN1</td><td style="padding:.38rem .6rem;color:#c8d8ec">c.1A>G · p.Met1Val</td><td style="padding:.38rem .6rem;color:#c8d8ec">0.0008</td><td style="padding:.38rem .6rem;color:#c8d8ec">Missense</td><td style="padding:.38rem .6rem;color:#fde68a">0/1 · GQ=16</td></tr>
+        <tr style="border-bottom:1px solid #0f1e2e"><td style="padding:.38rem .6rem;color:#c8d8ec">TP53</td><td style="padding:.38rem .6rem;color:#c8d8ec">c.817C>T · p.Arg273Cys</td><td style="padding:.38rem .6rem;color:#c8d8ec">0.0001</td><td style="padding:.38rem .6rem;color:#c8d8ec">Missense</td><td style="padding:.38rem .6rem;color:#fde68a">0/1 · GQ=18</td></tr>
+        <tr><td style="padding:.38rem .6rem;color:#c8d8ec">ADSL</td><td style="padding:.38rem .6rem;color:#c8d8ec">c.1157G>A · p.Arg386His</td><td style="padding:.38rem .6rem;color:#fde68a">0.38 (38%)</td><td style="padding:.38rem .6rem;color:#c8d8ec">Missense</td><td style="padding:.38rem .6rem;color:#c8d8ec">0/1 · 99</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="font-size:.72rem;color:#3d5570;margin-top:.5rem">Yellow = filtering flag. GQ &lt;20 = poor genotype quality. Highlighted row = surviving candidate after all filters.</p>
+  </div>
+
+  <div style="margin-bottom:1rem;margin-top:.8rem">
+    <button class="dl-btn" onclick="downloadVCF()">⬇ Download raw VCF</button>
+    <span style="font-size:.78rem;color:var(--muted)">Upload to VarSome or Franklin for full ACMG annotation</span>
+  </div>
+
+  <div class="vcf-box">
+    <h4>Step 1 — Upload & Annotate</h4>
+    <p style="font-size:.82rem;color:#8baac8;margin-bottom:.6rem">Upload the VCF to one of these tools to get full ACMG annotation, population frequencies, and computational predictions:</p>
+    <div class="tool-links">
+      <a class="tool-link" href="https://varsome.com" target="_blank">🔬 VarSome</a>
+      <a class="tool-link" href="https://franklin.genoox.com" target="_blank">⚡ Franklin (Genoox)</a>
+      <a class="tool-link" href="https://gnomad.broadinstitute.org" target="_blank">📊 gnomAD</a>
+      <a class="tool-link" href="https://www.ncbi.nlm.nih.gov/clinvar/" target="_blank">🗂 ClinVar</a>
+    </div>
+  </div>
+
+  <div class="vcf-box">
+    <h4>Step 2 — Identify the Clinically Relevant Variant</h4>
+    <p style="font-size:.82rem;color:#8baac8;margin-bottom:.7rem">After filtering the VCF (by MAF, consequence, and phenotype-relevant genes), enter the HGVS cDNA notation of the variant you would prioritise:</p>
+    <div class="vcf-submit-row">
+      <input class="vcf-input" id="vcf-answer" placeholder="e.g. NM_000218.3:c.64G>T" />
+      <button class="vcf-check-btn" onclick="checkVCFAnswer()">Check</button>
+    </div>
+    <div class="fb" id="vcf-fb"></div>
+  </div>
+
+  <div class="vcf-box" id="vcf-filter-task" style="display:none">
+    <h4>Step 3 — Filtering Exercise</h4>
+    <p style="font-size:.82rem;color:#8baac8;margin-bottom:.6rem">For each of the 12 VCF variants, choose the main reason to <em>exclude</em> it from further analysis (or keep it):</p>
+    <div id="filter-q"></div>
+  </div>
+
+  <div id="vcf-next" style="display:none">
+    <button class="next-btn" style="display:inline-block" onclick="goNext()">Continue to Variant Analysis →</button>
+  </div>`;
+}
+
+function downloadVCF() {
+  const blob = new Blob([VCF_CONTENT], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'LUCA_M_exome_GRCh38.vcf';
+  a.click();
+}
+
+const VCF_CORRECT = ['nm_000218.3:c.64g>t','kcnq1:c.64g>t','c.64g>t','c.64g>t p.gly22cys'];
+function checkVCFAnswer() {
+  const val = (document.getElementById('vcf-answer').value||'').trim().toLowerCase();
+  const fb = document.getElementById('vcf-fb');
+  if (VCF_CORRECT.some(c=>val.includes(c.toLowerCase()))) {
+    fb.className='fb ok'; fb.style.display='block';
+    fb.innerHTML=`<div class="fb-hdr">Correct variant identified</div>
+    <strong>KCNQ1 NM_000218.3:c.64G>T p.(Gly22Cys)</strong> — absent from gnomAD (MAF=0), heterozygous missense in an established LQTS gene, absent from all population databases. The other 11 variants are excluded by: MAF >1% (HFE, CFTR, KCNH2, KCNQ1 intronic, ADSL), synonymous consequence (SCN5A, KCNQ1 synonymous), unrelated phenotype (TTN, ABCC9), poor read support (TTN, FBN1, TP53), or hemizygosity mismatch. Filtering logic in clinical exome analysis always combines all three criteria simultaneously.
+    <br><br>
+    <strong>Why do the other KCNQ1 variants not qualify?</strong><br>
+    chr11:2592716 (rs1057519998) — MAF 0.42, intronic, common variant → filter.<br>
+    chr11:2646120 (rs1805127) — MAF 0.15, synonymous → filter.`;
+    document.getElementById('vcf-next').style.display='block';
+    ST_DONE[CUR_ST]=false; // will be set true by goNext
+  } else if (val.length>2) {
+    fb.className='fb err'; fb.style.display='block';
+    fb.innerHTML=`<div class="fb-hdr">Not quite</div>
+    Apply your filters: (1) remove variants with MAF >0.01 in gnomAD — this eliminates most variants; (2) keep only protein-altering consequences (missense, nonsense, frameshift, canonical splice); (3) restrict to cardiac arrhythmia genes (KCNQ1, KCNH2, SCN5A, etc.). Which variant survives all three filters? Enter the HGVS notation.`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// ACMG STATION
+// ═══════════════════════════════════════════════════════
+function renderACMGStation(st, rp) {
+  const items = st.acmgItems.map((it,i)=>
+    `<div class="acmg-it" id="ai-${i}" onclick="toggleACMG(${i})">
+      <div class="acmg-code">${it.code}</div>
+      <div class="acmg-desc">${it.desc}</div>
+    </div>`).join('');
+  const opts = st.classOptions.map(o=>`<option value="${o}">${o}</option>`).join('');
+  rp.innerHTML = `
+  <div class="stn-lbl">${st.label}</div>
+  <div class="stn-title">${st.title}</div>
+  <div class="info-chip" style="margin-bottom:1rem">
+    <h4>Step 1 — Select all applicable ACMG/AMP criteria</h4>
+    <p style="font-size:.82rem;color:#8baac8;margin-bottom:.8rem">Click each criterion that applies to KCNQ1 c.64G>T p.(Gly22Cys). Click again to deselect.</p>
+    <div class="acmg-grid">${items}</div>
+    <button class="sub-btn" id="acmg-sub-btn" onclick="submitACMG()">Check criteria selection</button>
+    <div class="fb" id="acmg-fb"></div>
+  </div>
+  <div class="info-chip" id="class-area" style="display:none">
+    <h4>Step 2 — Assign the final ACMG/AMP classification</h4>
+    <select class="class-sel" id="class-sel"><option value="">Select classification…</option>${opts}</select>
+    <button class="sub-btn" id="class-sub-btn" onclick="submitClass()">Submit classification</button>
+    <div class="fb" id="class-fb"></div>
+  </div>
+  <button class="next-btn" id="acmg-next" onclick="goNext()">Continue to Clinical Decision →</button>`;
+}
+
+function toggleACMG(i) {
+  if (acmgSubmitted) return;
+  const el = document.getElementById(`ai-${i}`);
+  el.classList.toggle('sel');
+  if (el.classList.contains('sel')) acmgSel.add(i);
+  else acmgSel.delete(i);
+}
+function submitACMG() {
+  if (acmgSubmitted) return;
+  acmgSubmitted = true;
+  const st = CUR_CASE.stations[CUR_ST];
+  st.acmgItems.forEach((it,i)=>{
+    const el=document.getElementById(`ai-${i}`);
+    el.classList.add('dis');
+    if(it.correct) el.classList.add('rev-ok'); else if(acmgSel.has(i)) el.classList.add('rev-err');
+  });
+  document.getElementById('acmg-sub-btn').disabled=true;
+  const sel = [...acmgSel].map(i=>st.acmgItems[i].code);
+  const cor = st.acmgItems.filter(x=>x.correct).map(x=>x.code);
+  const ok = cor.every(c=>sel.includes(c)) && sel.every(c=>cor.includes(c));
+  const fb=document.getElementById('acmg-fb');
+  fb.className=`fb ${ok?'ok':'err'}`; fb.style.display='block';
+  fb.innerHTML=`<div class="fb-hdr">${ok?'Criteria correctly identified':'Review required'}</div>${ok?st.fbCriteriaOK:st.fbCriteriaErr+' Correct selection shown in green.'}`;
+  document.getElementById('class-area').style.display='block';
+}
+function submitClass() {
+  if (classSubmitted) return;
+  const st = CUR_CASE.stations[CUR_ST];
+  const sel = document.getElementById('class-sel').value;
+  if (!sel) return;
+  classSubmitted=true;
+  document.getElementById('class-sub-btn').disabled=true;
+  document.getElementById('class-sel').disabled=true;
+  const ok = sel===st.correctClass;
+  const fb=document.getElementById('class-fb');
+  fb.className=`fb ${ok?'ok':'err'}`; fb.style.display='block';
+  fb.innerHTML=`<div class="fb-hdr">${ok?'Correct classification':'Incorrect'}</div>${ok?st.fbClassOK:st.fbClassErr}`;
+  if(ok||!ok){ ST_DONE[CUR_ST]=false; document.getElementById('acmg-next').style.display='inline-block'; }
+}
+
+// ═══════════════════════════════════════════════════════
+// COMPLETION
+// ═══════════════════════════════════════════════════════
+function renderCompletion() {
+  document.getElementById('l-panel').innerHTML='';
+  document.getElementById('r-panel').innerHTML=`
+  <div class="comp">
+    <div class="comp-icon">🎓</div>
+    <div class="comp-title">Case Complete</div>
+    <div class="comp-sub">Luca M. · Session IX · Genetic Variant Interpretation</div>
+    <div class="kp">
+      <h4>Key Learning Points</h4>
+      <div class="kp-item"><span class="ck">✓</span><span>LQTS1 is caused by loss-of-function variants in KCNQ1. IKs current reduction delays ventricular repolarization. Exercise triggers torsades de pointes because adrenergic amplification of IKs fails — the physiological mechanism that shortens the QT interval during physical exertion is absent.</span></div>
+      <div class="kp-item"><span class="ck">✓</span><span>Unaffected parents with an affected child in an autosomal dominant condition require distinction between de novo variant and reduced penetrance carrier. Only parental genetic testing resolves this — and it changes the recurrence risk for siblings from &lt;1% to 50%.</span></div>
+      <div class="kp-item"><span class="ck">✓</span><span>Clinical exome interpretation requires simultaneous MAF filtering, consequence filtering, and phenotype-driven gene prioritisation. KCNQ1 c.64G>T p.(Gly22Cys) is identified because it is absent from gnomAD, protein-altering, and in the primary LQTS1 disease gene.</span></div>
+      <div class="kp-item"><span class="ck">✓</span><span>ACMG classification: PM1 + PM2 + PM6 + PP3 + PP4 = Likely Pathogenic. Three moderate criteria alone (PM1 + PM2 + PM6) fulfil the LP rule. Confirmed de novo parental testing (PS2) would elevate to Pathogenic.</span></div>
+      <div class="kp-item"><span class="ck">✓</span><span>Likely Pathogenic in a symptomatic patient warrants clinical action: beta-blockers (propranolol/nadolol) first-line; activity restrictions; avoidance of QT-prolonging drugs; parental ECG and cascade genetic testing. ICD is not first-line therapy for LQTS1.</span></div>
+    </div>
+    <div>
+      <button class="home-btn" onclick="showLanding()">← All Cases</button>
+      <button class="rst-btn" onclick="openCase('luca')">Restart Case</button>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+renderLanding();
+</script>
+</body>
+</html>
