@@ -190,6 +190,9 @@ body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSys
     <h1>Clinical Genetics Cases</h1>
     <p>You are the attending clinical geneticist. Work through the case — step by step.</p>
     <div class="pill">Choose a patient to enter the consultation room →</div>
+    <div style="margin-top:1rem;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:.65rem 1.1rem;font-size:.8rem;color:#fde68a;display:inline-block">
+      ⚠ Preliminary prototype — one case fully developed (Luca M.). Remaining 11 rooms are placeholders for the funded project.
+    </div>
   </div>
   <div class="sec-lbl">Patient Registry</div>
   <div class="grid" id="patient-grid"></div>
@@ -216,6 +219,7 @@ body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSys
 // PATIENTS
 // ═══════════════════════════════════════════════════════
 const PATIENTS = [
+  {id:'luca',name:'Luca M.',age:'12 years',sex:'M',cc:'Recurrent syncope during soccer, QTc 480 ms on ECG',session:'Session IX · Variant Interpretation',emoji:'👦',on:true},
   {id:'elena',name:'Elena A.',age:'4 months',sex:'F',cc:'Hypotonia, dysmorphic features, congenital heart defect',session:'Session I · Chromosomal Disorders',emoji:'👶',on:false},
   {id:'tobias',name:'Tobias K.',age:'17 years',sex:'M',cc:'Tall stature, learning difficulties, infertility',session:'Session II · Sex Chromosome Disorders',emoji:'🧑',on:false},
   {id:'emily',name:'Emily N.',age:'5 months',sex:'F',cc:'Recurrent lung infections, failure to thrive',session:'Session III · Mendelian Inheritance',emoji:'👶',on:false},
@@ -224,7 +228,6 @@ const PATIENTS = [
   {id:'yuki',name:'Yuki T.',age:'16 years',sex:'F',cc:'Primary amenorrhea, short stature, webbed neck',session:'Session VI · Gonadal Genetics',emoji:'🧑',on:false},
   {id:'marco',name:'Marco S.',age:'34 years',sex:'M',cc:'Hundreds of colorectal polyps, family cancer history',session:'Session VII · Hereditary Cancer',emoji:'🧔',on:false},
   {id:'petra',name:'Petra W.',age:'38 years',sex:'F',cc:'Sister diagnosed with breast cancer, requests BRCA testing',session:'Session VIII · Cancer Genetics',emoji:'👩',on:false},
-  {id:'luca',name:'Luca M.',age:'12 years',sex:'M',cc:'Recurrent syncope during soccer, QTc 480 ms on ECG',session:'Session IX · Variant Interpretation',emoji:'👦',on:true},
   {id:'priya',name:'Priya R.',age:'45 years',sex:'F',cc:'Severe adverse reaction to standard-dose clopidogrel',session:'Session X · Pharmacogenomics',emoji:'👩',on:false},
   {id:'anna',name:'Anna K.',age:'31 years',sex:'F',cc:'Pregnant 12 weeks, cfDNA T21 risk 1:35',session:'Session XI · Prenatal Diagnostics',emoji:'🤰',on:false},
   {id:'jonas',name:'Jonas H.',age:'Newborn',sex:'M',cc:'Positive newborn screen for PKU, confirmation needed',session:'Session XII · Newborn Screening',emoji:'👶',on:false}
